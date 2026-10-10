@@ -30,3 +30,6 @@ Thumbs.db
 
 # preliminary evaluations from partially trained models
 reports/*_prelim/
+
+# cached model outputs written by evaluation scripts
+reports/*/cache/
