@@ -64,6 +64,8 @@ class RailSightPipeline:
     def reset(self):
         self.corridor: Corridor | None = None
         self.labels = self.conf = None
+        self.track_conf = 1.0
+        self._blob_tracks: list[tuple[tuple, int]] = []  # (box, consecutive segmentation updates seen)
         self.frame_idx = 0
         self.history = defaultdict(lambda: deque(maxlen=30))  # track id -> (t, lateral_m)
         r = self.cfg["risk"]
@@ -83,12 +85,19 @@ class RailSightPipeline:
         tic = time.perf_counter()
         h0, w0 = frame_bgr.shape[:2]
         frame = cv2.resize(frame_bgr, (self.work_width, round(h0 * self.work_width / w0)))
+        own = self._vehicle_mask(frame.shape[:2])
         tc, rc, ac = self.cfg["track"], self.cfg["risk"], self.cfg["anomaly"]
 
         # 1. segmentation + corridor (every N frames; the track changes slowly)
-        if self.seg is not None and self.frame_idx % tc["seg_every_n"] == 0:
+        seg_updated = self.seg is not None and self.frame_idx % tc["seg_every_n"] == 0
+        if seg_updated:
             self.labels, self.conf = self.seg(frame)
-            ego = select_ego_track(np.isin(self.labels, TRACK_IDS))
+            track = np.isin(self.labels, TRACK_IDS)
+            if own is not None:
+                track &= ~own
+            ego = select_ego_track(track)
+            # how sure the model is about the track itself; drops sharply in darkness or glare
+            self.track_conf = float(self.conf[ego].mean()) if ego.sum() > 200 else 0.0
             f = focal_from_hfov(frame.shape[1], self.cfg["camera"]["hfov_deg"])
             rails = np.isin(self.labels, RAIL_IDS) & ego if tc.get("rail_pairs") else None
             fit = Corridor.fit(ego, tc["gauge_m"] + tc.get("rail_head_m", 0.0), f, rail_mask=rails)
@@ -100,8 +109,8 @@ class RailSightPipeline:
         # 2. detection + tracking
         res = self.det.track(frame, persist=True, tracker="bytetrack.yaml", verbose=False,
                              device=self.seg.device if self.seg else self.cfg["models"]["device"],
-                             half=self.cfg["models"].get("det_half", False) and self.seg is not None
-                             and self.seg.device == "cuda",
+                             quantize="fp16" if self.cfg["models"].get("det_half", False)
+                             and self.seg is not None and self.seg.device == "cuda" else None,
                              conf=self.cfg["models"]["det_conf"], imgsz=self.cfg["models"]["det_imgsz"])[0]
         names = res.names
         dets = []
@@ -109,6 +118,10 @@ class RailSightPipeline:
             ids = res.boxes.id.int().tolist() if res.boxes.id is not None else [-1] * len(res.boxes)
             for box, c, conf, tid in zip(res.boxes.xyxy.cpu().numpy(), res.boxes.cls.int().tolist(),
                                          res.boxes.conf.tolist(), ids):
+                if own is not None:
+                    x1, y1, x2, y2 = (int(v) for v in box)
+                    if own[y1:y2 + 1, x1:x2 + 1].mean() > 0.5:
+                        continue  # an object inside the cab or on the vehicle itself
                 dets.append((box, names[c], conf, tid))
 
         # 3. physics
@@ -122,11 +135,13 @@ class RailSightPipeline:
             for i, (box, label, _conf, tid) in enumerate(dets):
                 hz = self._to_hazard(box, label, tid, t_s, cor)
                 det_a[i] = self._assess(hz, v, stop_d) if hz is not None else None
-            if ac["enabled"] and self.labels is not None:
+            low_visibility = self.track_conf < ac.get("min_track_conf", 0.0)
+            if ac["enabled"] and self.labels is not None and not low_visibility:
                 blobs = find_foreign_blobs(self.labels, self.conf, cor, ac["half_width_m"],
                                            ac["conf_threshold"], ac["min_size_m"],
                                            ac["min_area_px"], rc["max_range_m"],
-                                           [d[0] for d in dets])
+                                           [d[0] for d in dets], ignore_mask=own)
+                blobs = self._persistent(blobs, seg_updated, ac.get("persist_updates", 1))
                 for b in blobs:
                     hz = self._to_hazard(np.array(b.box, float), "unknown", -1, t_s, cor)
                     blob_a.append(self._assess(hz, v, stop_d) if hz is not None else None)
@@ -144,15 +159,48 @@ class RailSightPipeline:
                 "observed": observed.name, "speed_kmh": self.speed_kmh,
                 "stop_dist_m": round(stop_d, 1), "n_detections": len(dets),
                 "n_unknown": len(blobs), "nearest_in_path_m": None if nearest is None else round(nearest, 1),
-                "corridor": cor is not None, "fps": round(self._fps, 1)}
+                "corridor": cor is not None, "track_conf": round(self.track_conf, 3),
+                "low_visibility": cor is not None and self.track_conf < ac.get("min_track_conf", 0.0),
+                "fps": round(self._fps, 1)}
         img = self._render(frame, dets, det_a, blobs, blob_a, state, stop_d, info)
         self.frame_idx += 1
         return FrameResult(img, state, observed, assessments, info)
 
     # ------------------------------------------------------------------ helpers
+    def _persistent(self, blobs, seg_updated: bool, need: int):
+        """Keep only unknown objects seen at roughly the same place on `need` consecutive
+        segmentation updates; single-update flicker (glare, far-range noise) is dropped."""
+        if need <= 1:
+            return blobs
+
+        def near(a, b):
+            ax, ay, bx, by = (a[0] + a[2]) / 2, (a[1] + a[3]) / 2, (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+            size = max(a[2] - a[0], a[3] - a[1], b[2] - b[0], b[3] - b[1], 8)
+            return abs(ax - bx) < size and abs(ay - by) < size
+
+        if seg_updated:
+            tracks = []
+            for b in blobs:
+                hits = max((n for box, n in self._blob_tracks if near(b.box, box)), default=0)
+                tracks.append((b.box, hits + 1))
+            self._blob_tracks = tracks
+        confirmed = [box for box, n in self._blob_tracks if n >= need]
+        return [b for b in blobs if any(near(b.box, c) for c in confirmed)]
+
+    def _vehicle_mask(self, shape) -> np.ndarray | None:
+        """Image region showing the train itself (dashboard, hood), set once per camera mounting."""
+        frac = self.cfg["camera"].get("ignore_below")
+        if not frac:
+            return None
+        m = np.zeros(shape, bool)
+        m[int(frac * shape[0]) :] = True
+        return m
+
     def _to_hazard(self, box, label, tid, t_s, cor: Corridor) -> Hazard | None:
         x1, y1, x2, y2 = box
         y = min(float(y2), cor.height - 1)
+        if y > cor.bottom_y + 8:
+            return None  # ground contact below the visible track: inside the cab / on the vehicle
         if y <= cor.horizon_y + 2:
             return None  # at or above the horizon: no ground contact point to range from
         d = float(cor.distance_m(y))
@@ -231,7 +279,8 @@ class RailSightPipeline:
         lines = [
             f"speed {info['speed_kmh']:.0f} km/h   stop {info['stop_dist_m']:.0f} m",
             f"nearest in path: {'-' if near is None else f'{near:.0f} m'}",
-            ("track: locked" if info["corridor"] else "track: NOT FOUND") + f"   {info['fps']:.0f} fps",
+            ("track: NOT FOUND" if not info["corridor"] else "track: LOW VISIBILITY"
+             if info["low_visibility"] else "track: locked") + f"   {info['fps']:.0f} fps",
         ]
         for i, s in enumerate(lines):
             cv2.putText(img, s, (10, 56 + 22 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (235, 235, 235), 1,

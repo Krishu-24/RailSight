@@ -32,6 +32,7 @@ def find_foreign_blobs(
     min_area_px: int,
     max_range_m: float,
     exclude_boxes: list[tuple[float, float, float, float]] = (),
+    ignore_mask: np.ndarray | None = None,
 ) -> list[Blob]:
     """Blobs must be at least `min_size_m` across at their own distance (via the gauge scale),
     with `min_area_px` as an absolute floor against single-pixel noise."""
@@ -39,6 +40,8 @@ def find_foreign_blobs(
     rows = np.arange(labels.shape[0])
     zone[corridor.distance_m(rows) > max_range_m] = False
     zone[rows <= corridor.horizon_y + 2] = False
+    if ignore_mask is not None:  # e.g. the train's own cab / hood
+        zone &= ~ignore_mask
     ground = np.isin(labels, GROUND_IDS)
     suspicious = zone & (~ground | (conf < conf_threshold))
     for x1, y1, x2, y2 in exclude_boxes:  # already explained by the detector

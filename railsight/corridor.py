@@ -22,18 +22,23 @@ def focal_from_hfov(image_width: int, hfov_deg: float) -> float:
 
 
 def select_ego_track(track_mask: np.ndarray, bottom_frac: float = 0.15) -> np.ndarray:
-    """Keep the connected track region that starts at the bottom centre of the frame."""
+    """Keep the connected track region that starts nearest the bottom centre of the view.
+
+    The search band is anchored at the lowest row that shows any track, not at the image edge,
+    so a dashboard or hood covering the bottom of the frame does not hide the ego track.
+    """
     h, w = track_mask.shape
     n, labels, stats, _ = cv2.connectedComponentsWithStats(track_mask.astype(np.uint8), 8)
     if n <= 1:
         return np.zeros_like(track_mask, dtype=bool)
 
-    y0 = int(h * (1 - bottom_frac))
+    y_end = int(np.flatnonzero(track_mask.any(axis=1))[-1]) + 1
+    y0 = max(0, y_end - int(h * bottom_frac))
     cols = np.arange(w)
     centre_weight = 1.0 - np.abs(cols - w / 2) / (w / 2)  # 1 at centre, 0 at the edges
     best, best_score = 0, 0.0
     for i in range(1, n):
-        band = labels[y0:] == i
+        band = labels[y0:y_end] == i
         if not band.any():
             continue
         score = float((band * centre_weight[None, :]).sum())
@@ -170,6 +175,9 @@ class Corridor:
     width: int
     gauge_m: float
     focal_px: float
+    # nearest (largest) row where the track was observed. Below it the view may be blocked by the
+    # vehicle itself (dashboard, hood, wipers), so the corridor is not extended there.
+    y_bottom: float | None = None
 
     # ---------- construction ----------
     @classmethod
@@ -199,7 +207,7 @@ class Corridor:
         if len(centre_coef) == 2:
             centre_coef = np.concatenate([[0.0], centre_coef])
         h, w = ego_mask.shape
-        return cls(centre_coef, width_coef, float(ys.min()), h, w, gauge_m, focal_px)
+        return cls(centre_coef, width_coef, float(ys.min()), h, w, gauge_m, focal_px, float(ys.max()))
 
     def blend(self, prev: "Corridor | None", alpha: float) -> "Corridor":
         """Exponential moving average with the previous frame's fit."""
@@ -217,9 +225,14 @@ class Corridor:
             self.width,
             self.gauge_m,
             self.focal_px,
+            mix(self.bottom_y, prev.bottom_y),
         )
 
     # ---------- geometry ----------
+    @property
+    def bottom_y(self) -> float:
+        return self.height - 1 if self.y_bottom is None else min(self.y_bottom, self.height - 1)
+
     @property
     def horizon_y(self) -> float:
         a, b = self.width_coef
@@ -245,7 +258,7 @@ class Corridor:
         """Corridor outline (left edge bottom→top, then right edge top→bottom) as int32 points."""
         y_far = self.y_top if y_far is None else y_far
         y_far = max(y_far, self.horizon_y + 2)
-        ys = np.arange(self.height - 1, y_far, -step, dtype=np.float64)
+        ys = np.arange(round(self.bottom_y), y_far, -step, dtype=np.float64)
         if len(ys) < 2:
             return np.empty((0, 2), np.int32)
         half_px = half_width_m * self.px_per_m(ys)

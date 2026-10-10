@@ -112,3 +112,19 @@ def test_rail_mask_without_rails_falls_back():
     track = synthetic_track()
     cor = Corridor.fit(track, GAUGE, 800, rail_mask=np.zeros_like(track))
     assert cor is not None and cor.horizon_y == pytest.approx(HORIZON, abs=3)
+
+
+def test_corridor_stops_where_the_vehicle_blocks_the_view():
+    m = synthetic_track()
+    m[480:, :] = False  # dashboard / hood covers the bottom of the frame
+    cor = Corridor.fit(m, GAUGE, 800)
+    assert cor.bottom_y == pytest.approx(479, abs=1)
+    mask = cor.mask(2.1)
+    assert mask[470, W // 2] and not mask[500, W // 2]
+
+
+def test_ego_track_found_above_a_dashboard():
+    m = synthetic_track()
+    m[400:, :] = False  # the bottom quarter is the train's own dashboard
+    picked = select_ego_track(m)
+    assert picked[399, W // 2]

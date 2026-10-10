@@ -11,6 +11,8 @@ models:
 
 camera:
   hfov_deg: 60.0          # assumed horizontal field of view when intrinsics are unknown
+  ignore_below: null      # fraction of image height below which the view shows the train itself
+                          # (dashboard, hood), e.g. 0.72; set once per camera mounting
 
 track:
   gauge_m: 1.435          # 1.435 standard gauge, 1.676 Indian broad gauge
@@ -36,7 +38,11 @@ risk:
 
 anomaly:
   enabled: true
+  min_track_conf: 0.70    # skip the check when the model is unsure of the track itself (darkness,
+                          # glare): daylight clips score 0.8-0.98, a dark tunnel 0.47-0.68
   half_width_m: 1.0       # search only the track bed itself (between and just beside the rails)
+  persist_updates: 3      # an unknown object must appear on 3 consecutive segmentation updates
+                          # (~0.3 s at 30 fps) before it counts; filters glare / far-range flicker
   min_size_m: 0.3         # an unknown object must be at least this wide at its distance
   min_area_px: 30         # absolute floor against pixel noise
   conf_threshold: 0.0     # 0 = only non-ground classes count; low-confidence pixels add false
