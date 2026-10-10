@@ -1,0 +1,42 @@
+[
+  {
+    "variant": "class only",
+    "frames": 836,
+    "frames_with_obstacle": 102,
+    "precision": 0.5903614457831325,
+    "recall": 0.4803921568627451,
+    "F1": 0.5297297297297298,
+    "false_alarm_rate": 0.04632152588555858,
+    "object_recall": 0.4452054794520548
+  },
+  {
+    "variant": "class + conf<0.3",
+    "frames": 836,
+    "frames_with_obstacle": 102,
+    "precision": 0.5862068965517241,
+    "recall": 0.5,
+    "F1": 0.5396825396825397,
+    "false_alarm_rate": 0.04904632152588556,
+    "object_recall": 0.4452054794520548
+  },
+  {
+    "variant": "class + conf<0.5",
+    "frames": 836,
+    "frames_with_obstacle": 102,
+    "precision": 0.3403141361256545,
+    "recall": 0.6372549019607843,
+    "F1": 0.44368600682593856,
+    "false_alarm_rate": 0.17166212534059946,
+    "object_recall": 0.4794520547945205
+  },
+  {
+    "variant": "class + conf<0.7",
+    "frames": 836,
+    "frames_with_obstacle": 102,
+    "precision": 0.15347334410339256,
+    "recall": 0.9313725490196079,
+    "F1": 0.2635228848821082,
+    "false_alarm_rate": 0.7138964577656676,
+    "object_recall": 0.636986301369863
+  }
+]

@@ -1,0 +1,9 @@
+{
+  "frames_with_gt_track": 836,
+  "found_rate": 1.0,
+  "mean_IoU": 0.849946526068285,
+  "median_horizon_err_px": 4.025811718063878,
+  "median_rel_range_err_25m": 0.03703013634842449,
+  "median_rel_range_err_50m": 0.071317566918406,
+  "median_rel_range_err_100m": 0.1318204918695507
+}

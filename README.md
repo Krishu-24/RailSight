@@ -76,11 +76,11 @@ learned parts handle perception and the decision is made by transparent physics.
 
 ## Results
 
-_Detection is final for YOLO11s; the remaining rows fill in as training finishes._
+_Final for SegFormer-B2 and YOLO11s; the remaining rows fill in as training finishes. FPS is measured separately on the GPU._
 
 | Segmentation (RailSem19 test) | mIoU | track IoU | FPS |
 |---|---|---|---|
-| SegFormer-B2 | | | |
+| SegFormer-B2 | 0.696 | 0.912 | |
 | SegFormer-B0 | | | |
 | DeepLabV3-ResNet50 | | | |
 
@@ -96,10 +96,12 @@ The COCO model has no rock / vegetation / obstacle classes, which is the main ga
 
 | Corridor & unknown objects (RailSem19 test) | value |
 |---|---|
-| Corridor found (frames with a real track) | |
-| Corridor IoU vs ground-truth corridor | |
-| Ranging deviation caused by segmentation at 25 / 50 / 100 m | |
-| Unknown-object frame F1 / false-alarm rate | |
+| Corridor found (frames with a real track) | 100.0% of 836 |
+| Corridor IoU vs ground-truth corridor | 0.85 |
+| Horizon error (median) | 4.0 px |
+| Ranging deviation caused by segmentation at 25 / 50 / 100 m | 3.7% / 7.1% / 13.2% |
+| Unknown objects, class-only (default): precision / recall / false alarms | 0.59 / 0.48 / 4.6% |
+| Unknown objects, + low-confidence pixels (<0.5) | 0.34 / 0.64 / 17.2% |
 
 
 ---
