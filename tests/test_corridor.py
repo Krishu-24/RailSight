@@ -74,3 +74,41 @@ def test_too_little_track_returns_none():
     m = np.zeros((H, W), bool)
     m[H - 5 :, 400:500] = True
     assert Corridor.fit(m, GAUGE, 800) is None
+
+
+def synthetic_switch(slope: float = 1.2, rail_frac: float = 0.06):
+    """Ego track plus a neighbouring track that merges into it in the lower half of the frame.
+    Returns (track_mask, rail_mask)."""
+    track = np.zeros((H, W), bool)
+    rails = np.zeros((H, W), bool)
+    for y in range(int(HORIZON) + 5, H):
+        wd = slope * (y - HORIZON)
+        rw = max(1, int(rail_frac * wd))
+        for c in (W / 2, W / 2 - 1.6 * wd if y > 380 else None):  # neighbour appears near the bottom
+            if c is None:
+                continue
+            x0, x1 = int(c - wd / 2), int(c + wd / 2)
+            track[y, max(x0, 0) : max(x1, 0)] = True
+            for rx in (x0, x1 - rw):
+                if rx >= 0:
+                    rails[y, rx : rx + rw] = True
+        if y > 380:  # ballast between the two tracks is labelled as track too: one merged blob
+            track[y, max(int(W / 2 - 1.6 * wd), 0) : int(W / 2)] = True
+    return track, rails
+
+
+def test_rail_pairs_resist_merged_tracks():
+    track, rails = synthetic_switch()
+    f = 800
+    naive = Corridor.fit(track, GAUGE, f)
+    robust = Corridor.fit(track, GAUGE, f, rail_mask=rails)
+    true_w = 1.2 * (500 - HORIZON)
+    assert robust.width_px(500) == pytest.approx(true_w, rel=0.05)
+    assert robust.centre_x(500) == pytest.approx(W / 2, abs=4)
+    assert abs(naive.width_px(500) - true_w) > abs(robust.width_px(500) - true_w)
+
+
+def test_rail_mask_without_rails_falls_back():
+    track = synthetic_track()
+    cor = Corridor.fit(track, GAUGE, 800, rail_mask=np.zeros_like(track))
+    assert cor is not None and cor.horizon_y == pytest.approx(HORIZON, abs=3)

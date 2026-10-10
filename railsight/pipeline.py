@@ -20,7 +20,7 @@ from .risk import (
     assess_hazard,
     stopping_distance,
 )
-from .seg import TRACK_IDS, Segmenter, colorize
+from .seg import RAIL_IDS, TRACK_IDS, Segmenter, colorize
 
 LEVEL_COLOR = {RiskLevel.SAFE: (80, 200, 80), RiskLevel.WARNING: (0, 190, 255),
                RiskLevel.CRITICAL: (40, 40, 235)}  # BGR
@@ -89,7 +89,8 @@ class RailSightPipeline:
             self.labels, self.conf = self.seg(frame)
             ego = select_ego_track(np.isin(self.labels, TRACK_IDS))
             f = focal_from_hfov(frame.shape[1], self.cfg["camera"]["hfov_deg"])
-            fit = Corridor.fit(ego, tc["gauge_m"] + tc.get("rail_head_m", 0.0), f)
+            rails = np.isin(self.labels, RAIL_IDS) & ego if tc.get("rail_pairs") else None
+            fit = Corridor.fit(ego, tc["gauge_m"] + tc.get("rail_head_m", 0.0), f, rail_mask=rails)
             if fit is not None:
                 self.corridor = fit.blend(self.corridor, tc["smoothing"])
             elif self.corridor is not None and self.frame_idx % (tc["seg_every_n"] * 10) == 0:

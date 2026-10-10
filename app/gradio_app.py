@@ -17,16 +17,17 @@ CFG = load_config()
 PIPE = RailSightPipeline(CFG)
 
 
-def _configure(speed, gauge, show_seg):
+def _configure(speed, gauge, show_seg, hfov):
     PIPE.speed_kmh = speed
+    PIPE.cfg["camera"]["hfov_deg"] = hfov
     PIPE.cfg["track"]["gauge_m"] = gauge
     PIPE.show_seg = show_seg
 
 
-def run_image(image, speed, gauge, show_seg):
+def run_image(image, speed, gauge, show_seg, hfov):
     if image is None:
         return None, "Upload an image first."
-    _configure(speed, gauge, show_seg)
+    _configure(speed, gauge, show_seg, hfov)
     PIPE.reset()
     PIPE.sm.escalate_frames = 1  # a single frame has no history to smooth over
     r = PIPE.process(cv2.cvtColor(image, cv2.COLOR_RGB2BGR), 0.0)
@@ -45,10 +46,10 @@ def run_image(image, speed, gauge, show_seg):
     return cv2.cvtColor(r.image, cv2.COLOR_BGR2RGB), md
 
 
-def run_video(video, speed, gauge, show_seg, max_seconds, progress=gr.Progress()):
+def run_video(video, speed, gauge, show_seg, hfov, max_seconds, progress=gr.Progress()):
     if video is None:
         return None, None, "Upload a video first."
-    _configure(speed, gauge, show_seg)
+    _configure(speed, gauge, show_seg, hfov)
     out = Path(tempfile.mkdtemp(prefix="railsight_"))
     res = process_video(PIPE, video, out, max_seconds or None, progress=progress)
     share = res["share_of_time"]
@@ -65,6 +66,8 @@ with gr.Blocks(title="RailSight") as demo:
         gauge = gr.Radio([1.435, 1.676, 1.0], value=CFG["track"]["gauge_m"],
                          label="Track gauge (m): standard / Indian broad / metre")
         show_seg = gr.Checkbox(False, label="Show segmentation")
+        hfov = gr.Slider(30, 130, value=CFG["camera"]["hfov_deg"], step=5,
+                         label="Camera field of view (deg): sets the distance scale")
     with gr.Tab("Video"):
         with gr.Row():
             vin = gr.Video(label="Cab-view video")
@@ -73,14 +76,14 @@ with gr.Blocks(title="RailSight") as demo:
         vbtn = gr.Button("Run", variant="primary")
         timeline = gr.Image(label="Risk timeline")
         vmd = gr.Markdown()
-        vbtn.click(run_video, [vin, speed, gauge, show_seg, max_s], [vout, timeline, vmd])
+        vbtn.click(run_video, [vin, speed, gauge, show_seg, hfov, max_s], [vout, timeline, vmd])
     with gr.Tab("Image"):
         with gr.Row():
             iin = gr.Image(label="Cab-view image")
             iout = gr.Image(label="RailSight output")
         ibtn = gr.Button("Run", variant="primary")
         imd = gr.Markdown()
-        ibtn.click(run_image, [iin, speed, gauge, show_seg], [iout, imd])
+        ibtn.click(run_image, [iin, speed, gauge, show_seg, hfov], [iout, imd])
 
 if __name__ == "__main__":
     demo.queue().launch()

@@ -72,6 +72,69 @@ def trace_rows(ego_mask: np.ndarray, min_width: int = 2) -> np.ndarray:
     return np.array(out, dtype=np.float64).reshape(-1, 3)
 
 
+def _runs(row: np.ndarray, max_gap: int = 2) -> np.ndarray:
+    """[start, end) of True runs in a 1-D mask, bridging gaps of up to `max_gap` pixels."""
+    padded = np.concatenate([[0], row.astype(np.int8), [0]])
+    r = np.flatnonzero(np.diff(padded)).reshape(-1, 2)
+    if len(r) > 1:
+        keep = np.concatenate([[True], (r[1:, 0] - r[:-1, 1]) > max_gap])
+        starts = r[keep, 0]
+        ends = np.concatenate([r[np.flatnonzero(keep)[1:] - 1, 1], [r[-1, 1]]])
+        r = np.stack([starts, ends], 1)
+    return r
+
+
+def trace_rails(ego_mask: np.ndarray, rail_mask: np.ndarray, tol: float = 0.35) -> np.ndarray:
+    """Like `trace_rows`, but measures the gauge between the two rails of the ego track.
+
+    Where several tracks merge (switches, yards) the track region becomes one wide blob and
+    its width overstates the gauge. Inside the blob, adjacent rail pairs are considered and the
+    pair whose spacing matches the last measured gauge (within `tol`) and whose midpoint is
+    nearest the previous centre is kept; rows without such a pair are skipped. Tracing starts
+    with the rail pair whose midpoint is nearest the image centre (the camera sits over the
+    ego track).
+    """
+    h, w = ego_mask.shape
+    out = []
+    prev_c = prev_w = None
+    for y in range(h - 1, -1, -1):
+        row = ego_mask[y]
+        if not row.any():
+            if out:
+                break
+            continue
+        segs = _runs(row, 0)
+        centres = segs.mean(axis=1)
+        k = int(np.argmax(segs[:, 1] - segs[:, 0])) if prev_c is None else int(
+            np.argmin(np.abs(centres - prev_c))
+        )
+        s0, s1 = segs[k]
+        rails = _runs(rail_mask[y, s0:s1]) + s0
+        if len(rails) < 2:
+            continue
+        if prev_w is None:
+            mids = (rails[:-1, 0] + rails[1:, 1]) / 2
+            i = int(np.argmin(np.abs(mids - w / 2)))
+            if abs(mids[i] - w / 2) > w / 4:
+                continue
+            c, wd = mids[i], rails[i + 1, 1] - rails[i, 0]
+        else:
+            best = None
+            for i in range(len(rails) - 1):
+                wd_i = rails[i + 1, 1] - rails[i, 0]
+                if abs(wd_i / prev_w - 1) > tol:
+                    continue
+                c_i = (rails[i, 0] + rails[i + 1, 1]) / 2
+                if best is None or abs(c_i - prev_c) < abs(best[0] - prev_c):
+                    best = (c_i, wd_i)
+            if best is None:
+                continue
+            c, wd = best
+        out.append((y, c, wd))
+        prev_c, prev_w = c, wd
+    return np.array(out, dtype=np.float64).reshape(-1, 3)
+
+
 def _robust_polyfit(x: np.ndarray, y: np.ndarray, deg: int, iters: int = 3) -> np.ndarray:
     keep = np.ones_like(x, dtype=bool)
     coef = np.polyfit(x, y, deg)
@@ -84,6 +147,18 @@ def _robust_polyfit(x: np.ndarray, y: np.ndarray, deg: int, iters: int = 3) -> n
         keep = new_keep
         coef = np.polyfit(x[keep], y[keep], deg)
     return coef
+
+
+def _same_track(rail_rows: np.ndarray, region_rows: np.ndarray) -> bool:
+    """Rails may refine the gauge, but must not move the corridor onto another track: near the
+    bottom of the image their centre has to lie within half a track-region width of it."""
+    if len(region_rows) < 5:
+        return True
+    y = rail_rows[:, 0].max()
+    near = region_rows[np.argsort(np.abs(region_rows[:, 0] - y))[:5]]
+    c_region, w_region = near[:, 1].mean(), near[:, 2].mean()
+    c_rail = rail_rows[rail_rows[:, 0] >= y - 5, 1].mean()
+    return abs(c_rail - c_region) <= 0.5 * w_region
 
 
 @dataclass
@@ -104,8 +179,16 @@ class Corridor:
         gauge_m: float,
         focal_px: float,
         min_rows: int = 20,
+        rail_mask: np.ndarray | None = None,
     ) -> "Corridor | None":
-        rows = trace_rows(ego_mask)
+        """Fit to the ego track. With a rail mask, the gauge is measured between the rails
+        (robust at switches); otherwise from the width of the track region."""
+        region_rows = trace_rows(ego_mask)
+        rows = region_rows
+        if rail_mask is not None:
+            rail_rows = trace_rails(ego_mask, rail_mask)
+            if len(rail_rows) >= min_rows and _same_track(rail_rows, region_rows):
+                rows = rail_rows
         if len(rows) < min_rows:
             return None
         ys, cs, ws = rows[:, 0], rows[:, 1], rows[:, 2]

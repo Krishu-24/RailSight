@@ -13,6 +13,8 @@ camera:
 track:
   gauge_m: 1.435          # 1.435 standard gauge, 1.676 Indian broad gauge
   rail_head_m: 0.072      # the track mask spans outer rail edges = gauge + one rail-head width
+  rail_pairs: false       # experimental: measure gauge between the two ego rails; helps at
+                          # merged switches but picks wrong rail pairs elsewhere (mixed on RailSem19)
   train_width_m: 3.2      # kinematic envelope of the rolling stock
   side_margin_m: 0.5      # extra clearance on each side of the envelope
   seg_every_n: 3          # re-run segmentation every N frames (corridor changes slowly)

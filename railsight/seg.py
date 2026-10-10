@@ -25,6 +25,8 @@ CLS = {n: i for i, n in enumerate(RS19_CLASSES)}
 
 # Pixels that make up a drivable track (used to find the ego path)
 TRACK_IDS = [CLS["rail-track"], CLS["tram-track"], CLS["rail-raised"], CLS["rail-embedded"]]
+# The rails themselves (used to measure the gauge between the two rails of the ego track)
+RAIL_IDS = [CLS["rail-raised"], CLS["rail-embedded"]]
 # Surfaces that are normal to see on or between the rails; anything else there is foreign
 GROUND_IDS = TRACK_IDS + [CLS[c] for c in ("trackbed", "terrain", "vegetation", "road", "sidewalk")]
 
