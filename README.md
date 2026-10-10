@@ -76,7 +76,7 @@ learned parts handle perception and the decision is made by transparent physics.
 
 ## Results
 
-_All rows are final except RT-DETR-l, which is training on Kaggle._
+_All rows are final._
 
 | Segmentation (RailSem19 test) | mIoU | track IoU | FPS (RTX 5060 Laptop, 960x540) |
 |---|---|---|---|
@@ -87,12 +87,14 @@ _All rows are final except RT-DETR-l, which is training on Kaggle._
 | Detection (held-out test, 268 images) | mAP50 (6 classes) | mAP50 (person/animal/vehicle) | mAP50-95 | recall small / medium / large |
 |---|---|---|---|---|
 | YOLO11s COCO zero-shot | 0.290 | 0.579 | – | 0.41 / 0.64 / 0.68 |
-| YOLO11s fine-tuned | 0.667 | 0.800 | 0.370 | 0.90 / 0.78 / 0.82 |
-| YOLO11m fine-tuned | 0.695 | 0.817 | 0.391 | 0.93 / 0.78 / 0.81 |
-| RT-DETR-l fine-tuned | | | | |
+| YOLO11s fine-tuned | 0.666 | 0.800 | 0.370 | 0.90 / 0.78 / 0.82 |
+| YOLO11m fine-tuned | 0.694 | 0.816 | 0.391 | 0.93 / 0.78 / 0.81 |
+| RT-DETR-l fine-tuned | 0.712 | 0.837 | 0.390 | 0.96 / 0.90 / 0.93 |
 
 Recall is measured at the operating confidence (0.25); object size is sqrt(box area) at 640 px.
 The COCO model has no rock / vegetation / obstacle classes, which is the main gap fine-tuning closes.
+RT-DETR-l (trained on Kaggle, 2x T4) finds the most objects (highest recall at every size) but is the
+slowest; YOLO11m matches its box precision (mAP50-95).
 
 | Corridor & unknown objects (RailSem19 test) | SegFormer-B2 | DeepLabV3-ResNet50 | SegFormer-B0 |
 |---|---|---|---|

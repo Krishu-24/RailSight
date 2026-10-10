@@ -44,8 +44,10 @@ def load_gt(img_dir: Path):
 
 def predict(model, paths, class_map=None, imgsz=640, device=None):
     preds = []
-    for r in model.predict([str(p) for p in paths], conf=0.001, iou=0.6, imgsz=imgsz,
-                           stream=True, verbose=False, device=device):
+    results = (r for i in range(0, len(paths), 8)  # chunks: a whole list is sent as one batch
+               for r in model.predict([str(p) for p in paths[i : i + 8]], conf=0.001, iou=0.6,
+                                      imgsz=imgsz, verbose=False, device=device))
+    for r in results:
         b = r.boxes
         boxes, cls, conf = b.xyxy.cpu().numpy(), b.cls.cpu().numpy().astype(int), b.conf.cpu().numpy()
         if class_map is not None:
