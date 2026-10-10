@@ -37,8 +37,17 @@ BATCH = 16
 ```
 
 and **Save Version → Save & Run All** again. Free accounts may only run one GPU session at a
-time, in which case start this after run 1 finishes. RT-DETR is slower (expect 5–10 h). The
-`HOURS = 10.5` budget makes training stop cleanly, with weights saved, before Kaggle's 12-hour limit.
+time, in which case start this after run 1 finishes.
+
+RT-DETR is slower. Kaggle stops sessions at 12 hours, so check the first epoch's duration in the
+log: if one epoch takes more than about 6 minutes, stop the run, set `EPOCHS` so that
+`EPOCHS × epoch time` stays under ~10 hours, and start again. Record the epoch count used.
+
+**Do not use Ultralytics' `time=` argument as a safety budget.** It re-plans the number of epochs
+to fill the budget, which stretches the cosine learning-rate schedule. In our first YOLO11m run
+the learning rate stayed near 1e-3 for all 102 epochs instead of decaying, and early stopping ended
+the run before it converged (val mAP50 0.715 vs 0.739 for the smaller YOLO11s). That run is kept in
+`runs/archive/` and was retrained without `time=`.
 
 ## Bringing results back
 
