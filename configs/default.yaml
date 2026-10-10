@@ -1,0 +1,39 @@
+# RailSight runtime configuration (inference pipeline + demo)
+
+models:
+  seg_weights: runs/seg/segformer-b2/best          # HF folder saved by scripts/train_seg.py
+  det_weights: runs/det/yolo11s_rail/weights/best.pt
+  device: cuda
+  det_conf: 0.30
+  det_imgsz: 640
+
+camera:
+  hfov_deg: 60.0          # assumed horizontal field of view when intrinsics are unknown
+
+track:
+  gauge_m: 1.435          # 1.435 standard gauge, 1.676 Indian broad gauge
+  rail_head_m: 0.072      # the track mask spans outer rail edges = gauge + one rail-head width
+  train_width_m: 3.2      # kinematic envelope of the rolling stock
+  side_margin_m: 0.5      # extra clearance on each side of the envelope
+  seg_every_n: 3          # re-run segmentation every N frames (corridor changes slowly)
+  smoothing: 0.6          # EMA weight on the previous corridor fit (0 = no smoothing)
+
+train:
+  speed_kmh: 60.0
+  reaction_s: 2.0         # driver + system reaction time
+  decel_mps2: 1.0         # emergency braking deceleration
+
+risk:
+  stop_margin_m: 50.0     # safety buffer added to the stopping distance
+  max_range_m: 1000.0     # ignore objects estimated further than this
+  near_buffer_m: 2.0      # lateral zone beside the corridor treated as "near"
+  escalate_frames: 3      # frames needed to raise the alert level
+  deescalate_frames: 15   # frames needed to lower it again
+
+anomaly:
+  enabled: true
+  half_width_m: 1.0       # search only the track bed itself (between and just beside the rails)
+  min_size_m: 0.3         # an unknown object must be at least this wide at its distance
+  min_area_px: 30         # absolute floor against pixel noise
+  conf_threshold: 0.0     # 0 = only non-ground classes count; low-confidence pixels add false
+                          # alarms on class boundaries (see scripts/eval_anomaly.py)

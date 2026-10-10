@@ -1,0 +1,28 @@
+# environments
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# data and experiment outputs (too large for git; recreated by scripts/)
+data/raw/
+data/processed/
+data/incoming/
+data/videos/
+runs/
+outputs/
+
+# model weights
+*.pt
+*.pth
+*.onnx
+*.engine
+*.safetensors
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+

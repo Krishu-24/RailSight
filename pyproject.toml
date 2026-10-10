@@ -1,0 +1,51 @@
+[project]
+name = "railsight"
+version = "0.1.0"
+description = "Vision-based railway hazard detection and collision-risk estimation"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "torch>=2.7",
+    "torchvision>=0.22",
+    "ultralytics>=8.3",
+    "transformers>=4.45",
+    "opencv-python>=4.9",
+    "numpy",
+    "pyyaml",
+    "tqdm",
+    "matplotlib",
+    "pandas",
+    "tensorboard",
+    "gradio>=4.40",
+    "lap",
+    "imageio[ffmpeg]>=2.34",
+]
+
+[dependency-groups]
+dev = ["pytest", "ruff"]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["railsight"]
+
+[tool.ruff]
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP"]
+ignore = ["B008", "B905"]  # B008: gr.Progress() default is Gradio's documented pattern
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
