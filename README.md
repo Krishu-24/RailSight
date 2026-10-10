@@ -14,6 +14,10 @@ train, which cannot steer around an obstacle:
 
 The result is an interpretable **SAFE / WARNING / CRITICAL** state per frame.
 
+![RailSight on cab-view footage](docs/demo.gif)
+
+_Free Pexels clips; SegFormer-B2 + YOLO11m on an RTX 5060 Laptop GPU. The corridor colour is the current risk state, white ticks mark distance along the track._
+
 > Academic prototype (MAHE, School of Computer Engineering) for perception and decision support.
 > It is **not** a certified signalling or braking system.
 
