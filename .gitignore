@@ -10,6 +10,7 @@ data/raw/
 data/processed/
 data/incoming/
 data/videos/
+data/kaggle/
 runs/
 outputs/
 

@@ -25,7 +25,12 @@ def main():
     args = ap.parse_args()
 
     cls = RTDETR if "rtdetr" in args.model else YOLO
-    last = Path("runs/det") / args.name / "weights" / "last.pt"
+    run_dir = Path("runs/det") / args.name
+    last = run_dir / "weights" / "last.pt"
+    if (run_dir / "REMOTE").exists() and not last.exists():
+        # trained on another machine (see kaggle/README.md); delete the marker to train here
+        print(f"{args.name}: marked as trained remotely, skipping")
+        return
     if args.resume and last.exists():
         # Ultralytics marks a finished run's checkpoint with epoch -1
         if torch.load(last, map_location="cpu", weights_only=False).get("epoch", -1) == -1:

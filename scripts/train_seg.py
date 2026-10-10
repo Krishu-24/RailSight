@@ -39,7 +39,7 @@ def evaluate(net, loader, device):
     t0, n = time.time(), 0
     for x, y in tqdm(loader, desc="eval", leave=False):
         x, y = x.to(device), y.to(device)
-        with torch.autocast("cuda", dtype=torch.bfloat16):
+        with torch.autocast(x.device.type, dtype=torch.bfloat16, enabled=x.device.type == "cuda"):
             pred = net(x).argmax(1)
         valid = y != IGNORE_INDEX
         conf += torch.bincount(y[valid] * NUM_CLASSES + pred[valid],
@@ -80,12 +80,13 @@ def main():
     ap.add_argument("--resume", action="store_true", help="continue from runs/seg/<name>/last.pt")
     ap.add_argument("--split", default="val")
     ap.add_argument("--max-val", type=int, default=None, help="evaluate on a subset (smoke tests)")
+    ap.add_argument("--device", default="cuda", help="cpu for --eval-only while the GPU trains")
     args = ap.parse_args()
 
     name = args.name or args.arch
     out = Path("runs/seg") / name
     out.mkdir(parents=True, exist_ok=True)
-    device = "cuda"
+    device = args.device
     torch.backends.cudnn.benchmark = True
 
     val_ds = RailSem19(args.data, args.split if args.eval_only else "val", train=False)
