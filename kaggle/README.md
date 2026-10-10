@@ -45,9 +45,11 @@ log: if one epoch takes more than about 6 minutes, stop the run, set `EPOCHS` so
 
 **Do not use Ultralytics' `time=` argument as a safety budget.** It re-plans the number of epochs
 to fill the budget, which stretches the cosine learning-rate schedule. In our first YOLO11m run
-the learning rate stayed near 1e-3 for all 102 epochs instead of decaying, and early stopping ended
-the run before it converged (val mAP50 0.715 vs 0.739 for the smaller YOLO11s). That run is kept in
-`runs/archive/` and was retrained without `time=`.
+the learning rate stayed near 1e-3 for all 102 epochs instead of decaying (val mAP50 0.715). That
+run is kept in `runs/archive/` and was retrained without `time=`: the learning rate then decayed
+normally (to 3.4e-5), yet val mAP50 was 0.695, still below YOLO11s (0.739). On the held-out
+test split the order flips (YOLO11m 0.695 vs YOLO11s 0.667 mAP50): with ~270-image evaluation sets,
+differences of a few points are within noise, so the larger model's gain is small and uncertain.
 
 ## Bringing results back
 

@@ -88,7 +88,7 @@ _Final for SegFormer-B2 and YOLO11s; the remaining rows fill in as training fini
 |---|---|---|---|---|
 | YOLO11s COCO zero-shot | 0.290 | 0.579 | – | 0.41 / 0.64 / 0.68 |
 | YOLO11s fine-tuned | 0.667 | 0.800 | 0.370 | 0.90 / 0.78 / 0.82 |
-| YOLO11m fine-tuned | | | | |
+| YOLO11m fine-tuned | 0.695 | 0.817 | 0.391 | 0.93 / 0.78 / 0.81 |
 | RT-DETR-l fine-tuned | | | | |
 
 Recall is measured at the operating confidence (0.25); object size is sqrt(box area) at 640 px.
