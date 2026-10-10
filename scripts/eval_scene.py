@@ -72,10 +72,11 @@ def main():
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--width", type=int, default=960, help="pipeline working width")
-    ap.add_argument("--out", default="reports/scene")
+    ap.add_argument("--out", default=None, help="default: reports/scene_<model folder>")
     args = ap.parse_args()
 
     cfg = load_config()
+    args.out = args.out or f"reports/scene_{Path(args.weights).parent.name}"
     a, max_range = cfg["anomaly"], cfg["risk"]["max_range_m"]
     root = Path(args.data)
     ids = json.load(open(root / "splits.json", encoding="utf-8"))[args.split][: args.limit]

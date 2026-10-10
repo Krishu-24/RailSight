@@ -82,7 +82,7 @@ _Final for SegFormer-B2 and YOLO11s; the remaining rows fill in as training fini
 |---|---|---|---|
 | SegFormer-B2 | 0.696 | 0.912 | |
 | SegFormer-B0 | | | |
-| DeepLabV3-ResNet50 | | | |
+| DeepLabV3-ResNet50 | 0.677 | 0.914 | |
 
 | Detection (held-out test, 268 images) | mAP50 (6 classes) | mAP50 (person/animal/vehicle) | mAP50-95 | recall small / medium / large |
 |---|---|---|---|---|
@@ -94,14 +94,16 @@ _Final for SegFormer-B2 and YOLO11s; the remaining rows fill in as training fini
 Recall is measured at the operating confidence (0.25); object size is sqrt(box area) at 640 px.
 The COCO model has no rock / vegetation / obstacle classes, which is the main gap fine-tuning closes.
 
-| Corridor & unknown objects (RailSem19 test) | value |
-|---|---|
-| Corridor found (frames with a real track) | 100.0% of 836 |
-| Corridor IoU vs ground-truth corridor | 0.85 |
-| Horizon error (median) | 4.0 px |
-| Ranging deviation caused by segmentation at 25 / 50 / 100 m | 3.7% / 7.1% / 13.2% |
-| Unknown objects, class-only (default): precision / recall / false alarms | 0.59 / 0.48 / 4.6% |
-| Unknown objects, + low-confidence pixels (<0.5) | 0.34 / 0.64 / 17.2% |
+| Corridor & unknown objects (RailSem19 test) | SegFormer-B2 | DeepLabV3-ResNet50 |
+|---|---|---|
+| Corridor found (frames with a real track) | 100.0% | 99.8% |
+| Corridor IoU vs ground-truth corridor | 0.85 | 0.83 |
+| Horizon error (median) | 4.0 px | 4.9 px |
+| Ranging deviation from segmentation, 25 / 50 / 100 m | 3.7% / 7.1% / 13.2% | 4.7% / 8.9% / 16.1% |
+| Unknown objects, class-only: precision / recall / false alarms | 0.59 / 0.48 / 4.6% | 0.60 / 0.49 / 4.6% |
+| Unknown objects, + low-confidence pixels (<0.5) | 0.34 / 0.64 / 17.2% | 0.31 / 0.66 / 20.2% |
+
+Both models score the same track IoU, yet SegFormer-B2's corridor geometry is clearly better (about 20% lower ranging deviation): pixel overlap does not capture how cleanly the track edges follow the rails at long range, which is what ranging depends on.
 
 
 ---
@@ -128,7 +130,7 @@ bash scripts/train_all.sh
 # evaluation tables -> reports/
 uv run python scripts/eval_det.py
 uv run python scripts/train_seg.py --arch segformer-b2 --eval-only --split test
-uv run python scripts/eval_scene.py --weights runs/seg/segformer-b2/best --split test
+uv run python scripts/eval_scene.py --weights runs/seg/segformer-b2/best --split test   # -> reports/scene_segformer-b2/
 ```
 
 ## Run
