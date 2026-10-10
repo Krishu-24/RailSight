@@ -42,10 +42,10 @@ def load_gt(img_dir: Path):
     return paths, gts
 
 
-def predict(model, paths, class_map=None, imgsz=640):
+def predict(model, paths, class_map=None, imgsz=640, device=None):
     preds = []
     for r in model.predict([str(p) for p in paths], conf=0.001, iou=0.6, imgsz=imgsz,
-                           stream=True, verbose=False):
+                           stream=True, verbose=False, device=device):
         b = r.boxes
         boxes, cls, conf = b.xyxy.cpu().numpy(), b.cls.cpu().numpy().astype(int), b.conf.cpu().numpy()
         if class_map is not None:
@@ -73,6 +73,7 @@ def main():
     ap.add_argument("--data", default="data/processed/det")
     ap.add_argument("--split", default="test")
     ap.add_argument("--out", default="reports/detection")
+    ap.add_argument("--device", default=None, help="e.g. cpu while the GPU is training")
     args = ap.parse_args()
 
     paths, gts = load_gt(Path(args.data) / args.split / "images")
@@ -80,17 +81,18 @@ def main():
     rows = []
 
     coco = YOLO("yolo11s.pt")
-    res = evaluate_detections(gts, predict(coco, paths, COCO_TO_OURS), len(CLASSES),
+    res = evaluate_detections(gts, predict(coco, paths, COCO_TO_OURS, device=args.device), len(CLASSES),
                               size_bins=SIZE_BINS)
     rows.append(summarize("yolo11s COCO zero-shot", res))
 
     for w in sorted(Path("runs/det").glob("*/weights/best.pt")):
         name = w.parent.parent.name
         model = RTDETR(str(w)) if "rtdetr" in name else YOLO(str(w))
-        res = evaluate_detections(gts, predict(model, paths), len(CLASSES), size_bins=SIZE_BINS)
+        preds = predict(model, paths, device=args.device)
+        res = evaluate_detections(gts, preds, len(CLASSES), size_bins=SIZE_BINS)
         # Ultralytics' own validator for the standard mAP50-95 figure
         m = model.val(data=str(Path(args.data) / "data.yaml"), split=args.split, verbose=False,
-                      plots=False, project=str(Path("runs/det_eval").resolve()), name=name,
+                      plots=True, device=args.device, project=str(Path("runs/det_eval").resolve()), name=name,
                       exist_ok=True)
         speed = m.speed.get("inference", float("nan"))
         rows.append(summarize(name, res, {"mAP50-95 (ultralytics)": float(m.box.map),

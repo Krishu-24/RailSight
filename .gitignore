@@ -26,3 +26,6 @@ Thumbs.db
 .vscode/
 .idea/
 
+
+# preliminary evaluations from partially trained models
+reports/*_prelim/

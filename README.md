@@ -1,5 +1,7 @@
 # RailSight
 
+[![CI](https://github.com/Krishu-24/RailSight/actions/workflows/ci.yml/badge.svg)](https://github.com/Krishu-24/RailSight/actions/workflows/ci.yml)
+
 **Vision-based railway hazard detection and collision-risk estimation from a forward-facing train camera.**
 
 RailSight does more than detect objects. For every hazard it answers the two questions that matter to a
@@ -74,7 +76,7 @@ learned parts handle perception and the decision is made by transparent physics.
 
 ## Results
 
-_Filled in from `reports/` after the training runs finish._
+_Detection is final for YOLO11s; the remaining rows fill in as training finishes._
 
 | Segmentation (RailSem19 test) | mIoU | track IoU | FPS |
 |---|---|---|---|
@@ -82,12 +84,23 @@ _Filled in from `reports/` after the training runs finish._
 | SegFormer-B0 | | | |
 | DeepLabV3-ResNet50 | | | |
 
-| Detection (held-out test) | mAP50 | mAP50-95 | recall small / medium / large |
-|---|---|---|---|
-| YOLO11s COCO zero-shot | | | |
-| YOLO11s fine-tuned | | | |
-| YOLO11m fine-tuned | | | |
-| RT-DETR-l fine-tuned | | | |
+| Detection (held-out test, 268 images) | mAP50 (6 classes) | mAP50 (person/animal/vehicle) | mAP50-95 | recall small / medium / large |
+|---|---|---|---|---|
+| YOLO11s COCO zero-shot | 0.290 | 0.579 | – | 0.41 / 0.64 / 0.68 |
+| YOLO11s fine-tuned | 0.667 | 0.800 | 0.370 | 0.90 / 0.78 / 0.82 |
+| YOLO11m fine-tuned | | | | |
+| RT-DETR-l fine-tuned | | | | |
+
+Recall is measured at the operating confidence (0.25); object size is sqrt(box area) at 640 px.
+The COCO model has no rock / vegetation / obstacle classes, which is the main gap fine-tuning closes.
+
+| Corridor & unknown objects (RailSem19 test) | value |
+|---|---|
+| Corridor found (frames with a real track) | |
+| Corridor IoU vs ground-truth corridor | |
+| Ranging deviation caused by segmentation at 25 / 50 / 100 m | |
+| Unknown-object frame F1 / false-alarm rate | |
+
 
 ---
 
@@ -113,6 +126,7 @@ bash scripts/train_all.sh
 # evaluation tables -> reports/
 uv run python scripts/eval_det.py
 uv run python scripts/train_seg.py --arch segformer-b2 --eval-only --split test
+uv run python scripts/eval_scene.py --weights runs/seg/segformer-b2/best --split test
 ```
 
 ## Run
@@ -129,7 +143,7 @@ Settings such as gauge, camera field of view, braking deceleration and margins a
 
 ```
 railsight/   corridor.py  risk.py  seg.py  anomaly.py  pipeline.py  video.py  metrics.py  datasets.py
-scripts/     prepare_*.py  train_*.py  eval_det.py  run_video.py  train_all.sh
+scripts/     prepare_*.py  train_*.py  eval_det.py  eval_scene.py  run_video.py  train_all.sh
 app/         gradio_app.py
 configs/     default.yaml
 tests/       geometry, risk logic and metric unit tests

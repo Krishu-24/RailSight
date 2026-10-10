@@ -7,6 +7,7 @@
 import argparse
 from pathlib import Path
 
+import torch
 from ultralytics import RTDETR, YOLO
 
 
@@ -20,9 +21,20 @@ def main():
     ap.add_argument("--batch", type=float, default=16,
                     help="batch size, or a fraction <1 of GPU memory for Ultralytics AutoBatch")
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--resume", action="store_true", help="continue an interrupted run")
     args = ap.parse_args()
 
-    model = (RTDETR if "rtdetr" in args.model else YOLO)(args.model)  # COCO-pretrained start
+    cls = RTDETR if "rtdetr" in args.model else YOLO
+    last = Path("runs/det") / args.name / "weights" / "last.pt"
+    if args.resume and last.exists():
+        # Ultralytics marks a finished run's checkpoint with epoch -1
+        if torch.load(last, map_location="cpu", weights_only=False).get("epoch", -1) == -1:
+            print(f"{args.name}: already finished, skipping")
+            return
+        cls(str(last)).train(resume=True)
+        return
+
+    model = cls(args.model)  # COCO-pretrained start
     model.train(
         data=args.data,
         epochs=args.epochs,

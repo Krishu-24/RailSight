@@ -1,4 +1,11 @@
-"""Evaluate the class-agnostic foreign-object check against RailSem19 ground truth.
+"""Scene-level evaluation on RailSem19: danger-corridor accuracy and the foreign-object check.
+
+Corridor: the corridor fitted to the *predicted* segmentation is compared with the one fitted
+to the *ground-truth* segmentation: how often it is found, mask IoU, horizon error, and how far
+the predicted gauge ranging deviates from ground-truth geometry at fixed distances. This isolates
+the error that segmentation adds to ranging (absolute depth needs lidar, e.g. OSDaR23).
+
+Foreign objects:
 
 Ground truth per frame: the corridor is fitted to the *ground-truth* ego track, and any
 ground-truth pixels inside the inner track zone that are not normal track surface
@@ -11,7 +18,7 @@ low-confidence pixels as suspicious. Each variant is scored with
 
 Segmentation outputs are cached, so variants can be re-scored without re-running the model.
 
-    python scripts/eval_anomaly.py --weights runs/seg/segformer-b2/best --split test
+    python scripts/eval_scene.py --weights runs/seg/segformer-b2/best --split test
 """
 
 import argparse
@@ -26,6 +33,8 @@ from railsight.anomaly import find_foreign_blobs
 from railsight.config import load_config
 from railsight.corridor import Corridor, focal_from_hfov, select_ego_track
 from railsight.seg import GROUND_IDS, IGNORE_INDEX, TRACK_IDS, Segmenter
+
+RANGE_CHECK_M = (25, 50, 100)
 
 VARIANTS = {  # name -> confidence threshold (pixels below it count as suspicious)
     "class only": 0.0,
@@ -63,7 +72,7 @@ def main():
     ap.add_argument("--limit", type=int, default=None)
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--width", type=int, default=960, help="pipeline working width")
-    ap.add_argument("--out", default="reports/anomaly")
+    ap.add_argument("--out", default="reports/scene")
     args = ap.parse_args()
 
     cfg = load_config()
@@ -74,6 +83,8 @@ def main():
     cache.mkdir(parents=True, exist_ok=True)
     seg = None
 
+    cor_stats = {"frames": 0, "found": 0, "iou": [], "horizon_px": [],
+                 **{f"range_err_{d}m": [] for d in RANGE_CHECK_M}}
     stats = {v: {"tp": 0, "fp": 0, "fn": 0, "tn": 0, "gt_blobs": 0, "gt_hit": 0} for v in VARIANTS}
     n_eval = 0
     for name in tqdm(ids, desc="frames"):
@@ -94,7 +105,20 @@ def main():
             seg = seg or Segmenter(args.weights, args.device)
             labels, conf = seg(img)
             np.savez_compressed(cf, labels=labels, conf=conf.astype(np.float16))
-        pred_cor = fit_corridor(labels, cfg) or gt_cor  # fall back so detection is still judged
+        pred_fit = fit_corridor(labels, cfg)
+        cor_stats["frames"] += 1
+        if pred_fit is not None:
+            cor_stats["found"] += 1
+            hw = cfg["track"]["train_width_m"] / 2 + cfg["track"]["side_margin_m"]
+            gm, pm = gt_cor.mask(hw), pred_fit.mask(hw)
+            cor_stats["iou"].append((gm & pm).sum() / max((gm | pm).sum(), 1))
+            cor_stats["horizon_px"].append(abs(gt_cor.horizon_y - pred_fit.horizon_y))
+            a_, b_ = gt_cor.width_coef
+            for d in RANGE_CHECK_M:
+                y = (gt_cor.focal_px * gt_cor.gauge_m / d - b_) / a_  # row that GT geometry puts at d
+                if gt_cor.y_top <= y < gt.shape[0]:
+                    cor_stats[f"range_err_{d}m"].append(abs(float(pred_fit.distance_m(y)) - d) / d)
+        pred_cor = pred_fit or gt_cor  # fall back so object detection is still judged
 
         g = gt_blobs(gt, gt_cor, a, max_range)
         has_gt = len(g) > 0
@@ -125,6 +149,15 @@ def main():
             "object_recall": s["gt_hit"] / max(s["gt_blobs"], 1),
         })
     out = Path(args.out)
+    cs = cor_stats
+    corridor = {"frames_with_gt_track": cs["frames"], "found_rate": cs["found"] / max(cs["frames"], 1),
+                "mean_IoU": float(np.mean(cs["iou"])) if cs["iou"] else None,
+                "median_horizon_err_px": float(np.median(cs["horizon_px"])) if cs["horizon_px"] else None}
+    corridor.update({f"median_rel_range_err_{d}m": float(np.median(cs[f"range_err_{d}m"]))
+                     for d in RANGE_CHECK_M if cs[f"range_err_{d}m"]})
+    print("corridor:", json.dumps(corridor, indent=2))
+    with open(out / f"corridor_{args.split}.json", "w", encoding="utf-8") as f:
+        json.dump(corridor, f, indent=2)
     with open(out / f"results_{args.split}.json", "w", encoding="utf-8") as f:
         json.dump(rows, f, indent=2)
     cols = list(rows[0])
