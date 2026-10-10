@@ -2,10 +2,12 @@
 
 models:
   seg_weights: runs/seg/segformer-b2/best          # HF folder saved by scripts/train_seg.py
-  det_weights: runs/det/yolo11s_rail/weights/best.pt
+  det_weights: runs/det/yolo11m_rail/weights/best.pt   # +0.03 test mAP50 over YOLO11s for ~4 ms/frame
   device: cuda
+  seg_precision: bf16     # bf16 for SegFormer-B2 / DeepLab; fp32 is faster for the tiny SegFormer-B0
   det_conf: 0.30
   det_imgsz: 640
+  det_half: true          # fp16 detector: same test mAP, faster on GPU
 
 camera:
   hfov_deg: 60.0          # assumed horizontal field of view when intrinsics are unknown

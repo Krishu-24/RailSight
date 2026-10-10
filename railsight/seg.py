@@ -87,17 +87,21 @@ class DeepLabWrapper(nn.Module):
         (out_dir / "arch.txt").write_text(self.arch)
 
 
-def build_model(arch: str, num_classes: int = NUM_CLASSES, weights: str | None = None) -> nn.Module:
-    """Create a model for training (weights=None) or load trained weights from a run folder."""
+def build_model(arch: str, num_classes: int = NUM_CLASSES, weights: str | None = None,
+                attn: str | None = None) -> nn.Module:
+    """Create a model for training (weights=None) or load trained weights from a run folder.
+    `attn="sdpa"` selects PyTorch's fused attention kernels for SegFormer (faster inference)."""
     if arch.startswith("segformer"):
         from transformers import SegformerForSemanticSegmentation
 
+        kwargs = {"attn_implementation": attn} if attn else {}
         m = SegformerForSemanticSegmentation.from_pretrained(
             weights or SEGFORMER_INIT[arch],
             num_labels=num_classes,
             id2label=dict(enumerate(RS19_CLASSES)),
             label2id=CLS,
             ignore_mismatched_sizes=True,
+            **kwargs,
         )
         return SegFormerWrapper(m, arch)
     if arch.startswith("deeplab"):
@@ -124,23 +128,38 @@ def detect_arch(weights_dir: str | Path) -> str:
 
 
 # ---------------------------------------------------------------- inference
-class Segmenter:
-    """Loads a trained model and returns per-pixel labels + confidence for a BGR frame."""
+PRECISIONS = {"fp32": None, "fp16": torch.float16, "bf16": torch.bfloat16}
 
-    def __init__(self, weights_dir: str | Path, device: str = "cuda"):
+
+class Segmenter:
+    """Loads a trained model and returns per-pixel labels + confidence for a BGR frame.
+
+    `precision` sets autocast on the GPU. Measured on an RTX 5060 Laptop at 960x544: SegFormer-B2
+    is fastest in bf16 with fused attention (36 vs 49 ms per frame with eager fp16), while the
+    tiny B0 is fastest in plain fp32 because autocast overhead outweighs its compute.
+    """
+
+    def __init__(self, weights_dir: str | Path, device: str = "cuda", precision: str = "bf16"):
         self.device = device if torch.cuda.is_available() else "cpu"
-        self.net = build_model(detect_arch(weights_dir), weights=str(weights_dir))
+        arch = detect_arch(weights_dir)
+        attn = "sdpa" if arch.startswith("segformer") else None
+        self.net = build_model(arch, weights=str(weights_dir), attn=attn)
         self.net.eval().to(self.device)
+        self.dtype = PRECISIONS[precision] if self.device == "cuda" else None
+        self.mean = torch.tensor(MEAN * 255, device=self.device).view(1, 3, 1, 1)
+        self.std = torch.tensor(STD * 255, device=self.device).view(1, 3, 1, 1)
+        torch.backends.cudnn.benchmark = True  # fixed input size: let cuDNN pick the fastest kernels
 
     @torch.inference_mode()
     def __call__(self, frame_bgr: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         h, w = frame_bgr.shape[:2]
-        # pad to a multiple of 32 so both architectures accept any working resolution
+        # pad to a multiple of 32 so every architecture accepts any working resolution
         ph, pw = (32 - h % 32) % 32, (32 - w % 32) % 32
-        rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-        rgb = cv2.copyMakeBorder(rgb, 0, ph, 0, pw, cv2.BORDER_REFLECT)
-        x = normalize(rgb)[None].to(self.device)
-        with torch.autocast(self.device, dtype=torch.float16, enabled=self.device == "cuda"):
+        bgr = cv2.copyMakeBorder(frame_bgr, 0, ph, 0, pw, cv2.BORDER_REFLECT)
+        # upload raw bytes and normalise on the GPU (much cheaper than float maths on the CPU)
+        x = torch.from_numpy(bgr).to(self.device).permute(2, 0, 1)[None].flip(1).float()
+        x = (x - self.mean) / self.std
+        with torch.autocast(self.device, dtype=self.dtype or torch.float32, enabled=self.dtype is not None):
             logits = self.net(x)[0, :, :h, :w].float()
         prob = logits.softmax(0)
         conf, labels = prob.max(0)

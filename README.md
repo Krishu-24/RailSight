@@ -76,13 +76,13 @@ learned parts handle perception and the decision is made by transparent physics.
 
 ## Results
 
-_Final for SegFormer-B2 and YOLO11s; the remaining rows fill in as training finishes. FPS is measured separately on the GPU._
+_All rows are final except RT-DETR-l, which is training on Kaggle._
 
-| Segmentation (RailSem19 test) | mIoU | track IoU | FPS |
+| Segmentation (RailSem19 test) | mIoU | track IoU | FPS (RTX 5060 Laptop, 960x540) |
 |---|---|---|---|
-| SegFormer-B2 | 0.696 | 0.912 | |
-| SegFormer-B0 | | | |
-| DeepLabV3-ResNet50 | 0.677 | 0.914 | |
+| SegFormer-B2 | 0.696 | 0.912 | 21 |
+| DeepLabV3-ResNet50 | 0.677 | 0.914 | 28 |
+| SegFormer-B0 | 0.645 | 0.881 | 54 |
 
 | Detection (held-out test, 268 images) | mAP50 (6 classes) | mAP50 (person/animal/vehicle) | mAP50-95 | recall small / medium / large |
 |---|---|---|---|---|
@@ -94,17 +94,28 @@ _Final for SegFormer-B2 and YOLO11s; the remaining rows fill in as training fini
 Recall is measured at the operating confidence (0.25); object size is sqrt(box area) at 640 px.
 The COCO model has no rock / vegetation / obstacle classes, which is the main gap fine-tuning closes.
 
-| Corridor & unknown objects (RailSem19 test) | SegFormer-B2 | DeepLabV3-ResNet50 |
-|---|---|---|
-| Corridor found (frames with a real track) | 100.0% | 99.8% |
-| Corridor IoU vs ground-truth corridor | 0.85 | 0.83 |
-| Horizon error (median) | 4.0 px | 4.9 px |
-| Ranging deviation from segmentation, 25 / 50 / 100 m | 3.7% / 7.1% / 13.2% | 4.7% / 8.9% / 16.1% |
-| Unknown objects, class-only: precision / recall / false alarms | 0.59 / 0.48 / 4.6% | 0.60 / 0.49 / 4.6% |
-| Unknown objects, + low-confidence pixels (<0.5) | 0.34 / 0.64 / 17.2% | 0.31 / 0.66 / 20.2% |
+| Corridor & unknown objects (RailSem19 test) | SegFormer-B2 | DeepLabV3-ResNet50 | SegFormer-B0 |
+|---|---|---|---|
+| Corridor found (frames with a real track) | 100.0% | 99.8% | 99.6% |
+| Corridor IoU vs ground-truth corridor | 0.85 | 0.83 | 0.83 |
+| Horizon error (median) | 4.0 px | 4.9 px | 5.5 px |
+| Ranging deviation from segmentation, 25 / 50 / 100 m | 3.7% / 7.1% / 13.2% | 4.7% / 8.9% / 16.1% | 5.2% / 10.2% / 18.0% |
+| Unknown objects, class-only: precision / recall / false alarms | 0.59 / 0.48 / 4.6% | 0.60 / 0.49 / 4.6% | 0.62 / 0.36 / 3.1% |
+| Unknown objects, + low-confidence pixels (<0.5) | 0.34 / 0.64 / 17.2% | 0.31 / 0.66 / 20.2% | 0.21 / 0.63 / 32.4% |
 
-Both models score the same track IoU, yet SegFormer-B2's corridor geometry is clearly better (about 20% lower ranging deviation): pixel overlap does not capture how cleanly the track edges follow the rails at long range, which is what ranging depends on.
+SegFormer-B2 and DeepLabV3 score the same track IoU, yet B2's corridor geometry is clearly better (about 20% lower ranging deviation): pixel overlap does not capture how cleanly the track edges follow the rails at long range, which is what ranging depends on. B2 is the default model.
 
+
+| Speed (RTX 5060 Laptop, 960x540) | FPS |
+|---|---|
+| Full pipeline, segmentation every frame | 9.8 |
+| Full pipeline, segmentation every 3rd frame (default) | 17.7 |
+| YOLO11s / YOLO11m alone (fp16) | 57 / 46 |
+
+Profiling-driven optimisation (fused SDPA attention, bf16, GPU-side normalisation, fp16 detector) raised
+SegFormer-B2 from 14.8 to 21.0 FPS, SegFormer-B0 from 22.3 to 53.8 FPS and the full
+pipeline from 15.0 to 17.7 FPS, while switching to the more accurate YOLO11m (about 4 ms per frame
+slower than YOLO11s in fp16). Predictions are unchanged: >99.9% pixel agreement, identical detector test mAP.
 
 ---
 

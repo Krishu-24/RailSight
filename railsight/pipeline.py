@@ -48,7 +48,8 @@ class RailSightPipeline:
         self.show_seg = show_seg
         m = cfg["models"]
         seg_dir = _resolve(m["seg_weights"])
-        self.seg = Segmenter(seg_dir, m["device"]) if seg_dir.exists() else None
+        precision = m.get("seg_precision", "bf16")
+        self.seg = Segmenter(seg_dir, m["device"], precision) if seg_dir.exists() else None
         if self.seg is None:
             print(f"[railsight] no segmentation weights at {seg_dir}: corridor disabled")
 
@@ -99,6 +100,8 @@ class RailSightPipeline:
         # 2. detection + tracking
         res = self.det.track(frame, persist=True, tracker="bytetrack.yaml", verbose=False,
                              device=self.seg.device if self.seg else self.cfg["models"]["device"],
+                             half=self.cfg["models"].get("det_half", False) and self.seg is not None
+                             and self.seg.device == "cuda",
                              conf=self.cfg["models"]["det_conf"], imgsz=self.cfg["models"]["det_imgsz"])[0]
         names = res.names
         dets = []

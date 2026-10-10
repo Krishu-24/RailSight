@@ -49,7 +49,7 @@ def main():
 
     rows = []
     for w in sorted(Path("runs/seg").glob("*/best")):
-        seg = Segmenter(w, "cuda")
+        seg = Segmenter(w, "cuda", "fp32" if w.parent.name == "segformer-b0" else "bf16")
         fps = timed(seg, frames)
         rows.append({"stage": "segmentation", "model": w.parent.name, "fps": fps,
                      "peak_mem_GB": torch.cuda.max_memory_allocated() / 2**30})
@@ -62,7 +62,7 @@ def main():
     for w in sorted(Path("runs/det").glob("*/weights/best.pt")):
         name = w.parent.parent.name
         det = (RTDETR if "rtdetr" in name else YOLO)(str(w))
-        fps = timed(lambda f, d=det: d.predict(f, imgsz=640, verbose=False, device=0), frames)
+        fps = timed(lambda f, d=det: d.predict(f, imgsz=640, half=True, verbose=False, device=0), frames)
         rows.append({"stage": "detection", "model": name, "fps": fps})
         del det
         torch.cuda.empty_cache()

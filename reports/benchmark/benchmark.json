@@ -1,0 +1,40 @@
+[
+  {
+    "stage": "segmentation",
+    "model": "deeplab-r50",
+    "fps": 27.719048813073744,
+    "peak_mem_GB": 0.4667220115661621
+  },
+  {
+    "stage": "segmentation",
+    "model": "segformer-b0",
+    "fps": 53.8180951612017,
+    "peak_mem_GB": 2.7150115966796875
+  },
+  {
+    "stage": "segmentation",
+    "model": "segformer-b2",
+    "fps": 21.03233515414431,
+    "peak_mem_GB": 1.4468460083007812
+  },
+  {
+    "stage": "detection",
+    "model": "yolo11m_rail",
+    "fps": 45.623301900722375
+  },
+  {
+    "stage": "detection",
+    "model": "yolo11s_rail",
+    "fps": 56.953942542750184
+  },
+  {
+    "stage": "full pipeline",
+    "model": "default config, segmentation every 1 frame(s)",
+    "fps": 9.790832281738254
+  },
+  {
+    "stage": "full pipeline",
+    "model": "default config, segmentation every 3 frame(s)",
+    "fps": 17.72912401852392
+  }
+]
