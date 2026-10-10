@@ -1,9 +1,9 @@
 {
-  "frames_with_gt_track": 836,
-  "found_rate": 0.9964114832535885,
-  "mean_IoU": 0.8279830570915219,
-  "median_horizon_err_px": 5.531204906569656,
-  "median_rel_range_err_25m": 0.052432424134579776,
-  "median_rel_range_err_50m": 0.10223228322501085,
-  "median_rel_range_err_100m": 0.18013035860695126
+  "frames_with_gt_track": 845,
+  "found_rate": 0.9964497041420118,
+  "mean_IoU": 0.8099899877528007,
+  "median_horizon_err_px": 5.556056698268009,
+  "median_rel_range_err_25m": 0.05249606383076582,
+  "median_rel_range_err_50m": 0.10304962437287614,
+  "median_rel_range_err_100m": 0.1809311797464116
 }

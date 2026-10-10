@@ -1,42 +1,42 @@
 [
   {
     "variant": "class only",
-    "frames": 836,
-    "frames_with_obstacle": 102,
-    "precision": 0.5903614457831325,
-    "recall": 0.4803921568627451,
-    "F1": 0.5297297297297298,
-    "false_alarm_rate": 0.04632152588555858,
-    "object_recall": 0.4452054794520548
+    "frames": 845,
+    "frames_with_obstacle": 103,
+    "precision": 0.5764705882352941,
+    "recall": 0.47572815533980584,
+    "F1": 0.5212765957446808,
+    "false_alarm_rate": 0.04851752021563342,
+    "object_recall": 0.44594594594594594
   },
   {
     "variant": "class + conf<0.3",
-    "frames": 836,
-    "frames_with_obstacle": 102,
-    "precision": 0.5862068965517241,
-    "recall": 0.5,
-    "F1": 0.5396825396825397,
-    "false_alarm_rate": 0.04904632152588556,
-    "object_recall": 0.4452054794520548
+    "frames": 845,
+    "frames_with_obstacle": 103,
+    "precision": 0.5730337078651685,
+    "recall": 0.49514563106796117,
+    "F1": 0.5312499999999999,
+    "false_alarm_rate": 0.05121293800539083,
+    "object_recall": 0.44594594594594594
   },
   {
     "variant": "class + conf<0.5",
-    "frames": 836,
-    "frames_with_obstacle": 102,
-    "precision": 0.3403141361256545,
-    "recall": 0.6372549019607843,
-    "F1": 0.44368600682593856,
-    "false_alarm_rate": 0.17166212534059946,
-    "object_recall": 0.4794520547945205
+    "frames": 845,
+    "frames_with_obstacle": 103,
+    "precision": 0.3299492385786802,
+    "recall": 0.6310679611650486,
+    "F1": 0.43333333333333335,
+    "false_alarm_rate": 0.1778975741239892,
+    "object_recall": 0.4797297297297297
   },
   {
     "variant": "class + conf<0.7",
-    "frames": 836,
-    "frames_with_obstacle": 102,
-    "precision": 0.15347334410339256,
-    "recall": 0.9313725490196079,
-    "F1": 0.2635228848821082,
-    "false_alarm_rate": 0.7138964577656676,
-    "object_recall": 0.636986301369863
+    "frames": 845,
+    "frames_with_obstacle": 103,
+    "precision": 0.15311004784688995,
+    "recall": 0.9320388349514563,
+    "F1": 0.26301369863013696,
+    "false_alarm_rate": 0.715633423180593,
+    "object_recall": 0.6351351351351351
   }
 ]
