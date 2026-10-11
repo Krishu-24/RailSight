@@ -2,21 +2,30 @@
   {
     "model": "yolo11s COCO zero-shot",
     "mAP50_all": 0.28961165371944025,
+    "mAP50_known_classes": 0.5792233074388805,
     "mAP50_shared": 0.5792233074388805,
+    "mAP50-95": 0.14060006908721154,
     "AP50_person": 0.6456036207259545,
     "AP50_animal": 0.828331444517501,
     "AP50_vehicle": 0.2637348570731861,
-    "AP50_rock": 0.0,
-    "AP50_vegetation": 0.0,
-    "AP50_obstacle": 0.0,
     "recall_small(<32px)": 0.4065040650406504,
     "recall_medium(32-96px)": 0.6397694524495677,
-    "recall_large(>96px)": 0.6774193548387096
+    "recall_large(>96px)": 0.6774193548387096,
+    "gt_boxes": {
+      "person": 464,
+      "animal": 241,
+      "vehicle": 25,
+      "rock": 46,
+      "vegetation": 18,
+      "obstacle": 48
+    }
   },
   {
     "model": "rtdetr_l_rail",
     "mAP50_all": 0.7124671766220793,
+    "mAP50_known_classes": 0.7124671766220793,
     "mAP50_shared": 0.8374785224481284,
+    "mAP50-95": 0.39006309196875844,
     "AP50_person": 0.8569577879557104,
     "AP50_animal": 0.9475536334298778,
     "AP50_vehicle": 0.707924145958797,
@@ -26,14 +35,24 @@
     "recall_small(<32px)": 0.959349593495935,
     "recall_medium(32-96px)": 0.9020172910662824,
     "recall_large(>96px)": 0.9301075268817204,
+    "gt_boxes": {
+      "person": 464,
+      "animal": 241,
+      "vehicle": 25,
+      "rock": 46,
+      "vegetation": 18,
+      "obstacle": 48
+    },
     "mAP50-95 (ultralytics)": 0.3895586598339728,
     "mAP50 (ultralytics)": 0.7116861631578469,
-    "ms/img": 17.685404104545952
+    "ms/img": 17.59618880600671
   },
   {
     "model": "yolo11m_rail",
     "mAP50_all": 0.6944465712020712,
+    "mAP50_known_classes": 0.6944465712020712,
     "mAP50_shared": 0.8164520723118832,
+    "mAP50-95": 0.3715778402159795,
     "AP50_person": 0.8447495962024094,
     "AP50_animal": 0.936183260174098,
     "AP50_vehicle": 0.6684233605591424,
@@ -43,14 +62,48 @@
     "recall_small(<32px)": 0.926829268292683,
     "recall_medium(32-96px)": 0.7838616714697406,
     "recall_large(>96px)": 0.8064516129032258,
+    "gt_boxes": {
+      "person": 464,
+      "animal": 241,
+      "vehicle": 25,
+      "rock": 46,
+      "vegetation": 18,
+      "obstacle": 48
+    },
     "mAP50-95 (ultralytics)": 0.3911346459489438,
     "mAP50 (ultralytics)": 0.7298367303580093,
-    "ms/img": 11.487197014937566
+    "ms/img": 11.514863432836789
+  },
+  {
+    "model": "yolo11m_rail_v2",
+    "mAP50_all": 0.716016256958949,
+    "mAP50_known_classes": 0.716016256958949,
+    "mAP50_shared": 0.8245779688168041,
+    "mAP50-95": 0.3905200312099234,
+    "AP50_person": 0.8468857608231168,
+    "AP50_animal": 0.9292373003322397,
+    "AP50_vehicle": 0.6976108452950559,
+    "AP50_rock": 0.6419776433401772,
+    "AP50_vegetation": 0.4012414477882104,
+    "AP50_obstacle": 0.7791445441748946,
+    "recall_small(<32px)": 0.8780487804878049,
+    "recall_medium(32-96px)": 0.7752161383285303,
+    "recall_large(>96px)": 0.8279569892473119,
+    "gt_boxes": {
+      "person": 464,
+      "animal": 241,
+      "vehicle": 25,
+      "rock": 46,
+      "vegetation": 18,
+      "obstacle": 48
+    }
   },
   {
     "model": "yolo11s_rail",
     "mAP50_all": 0.666496074471035,
+    "mAP50_known_classes": 0.666496074471035,
     "mAP50_shared": 0.8003949941951988,
+    "mAP50-95": 0.35790275900864704,
     "AP50_person": 0.8138003536004468,
     "AP50_animal": 0.8790580546330122,
     "AP50_vehicle": 0.7083265743521373,
@@ -60,8 +113,16 @@
     "recall_small(<32px)": 0.9024390243902439,
     "recall_medium(32-96px)": 0.7809798270893372,
     "recall_large(>96px)": 0.8225806451612904,
+    "gt_boxes": {
+      "person": 464,
+      "animal": 241,
+      "vehicle": 25,
+      "rock": 46,
+      "vegetation": 18,
+      "obstacle": 48
+    },
     "mAP50-95 (ultralytics)": 0.37036138896770854,
     "mAP50 (ultralytics)": 0.6797159420391675,
-    "ms/img": 5.074653358195661
+    "ms/img": 4.901622761294607
   }
 ]
