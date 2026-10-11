@@ -1,0 +1,41 @@
+[
+  {
+    "model": "yolo11s COCO zero-shot",
+    "mAP50_all": 0.20578917675993325,
+    "mAP50_known_classes": 0.20578917675993325,
+    "mAP50_shared": 0.21905674747146892,
+    "mAP50-95": 0.09254604654205177,
+    "AP50_person": 0.25323211269642765,
+    "AP50_vehicle": 0.18488138224651018,
+    "AP50_rail_vehicle": 0.1792540353368619,
+    "recall_small(<32px)": 0.12723449001051526,
+    "recall_medium(32-96px)": 0.42876344086021506,
+    "recall_large(>96px)": 0.5241379310344828,
+    "gt_boxes": {
+      "person": 552,
+      "vehicle": 1018,
+      "rail_vehicle": 415
+    }
+  },
+  {
+    "model": "yolo11m_rail_v2",
+    "mAP50_all": 0.46232083356522846,
+    "mAP50_known_classes": 0.46232083356522846,
+    "mAP50_shared": 0.5408426873652944,
+    "mAP50-95": 0.2596810980464652,
+    "AP50_person": 0.5591044674436061,
+    "AP50_vehicle": 0.5225809072869827,
+    "AP50_rail_vehicle": 0.30527712596509665,
+    "recall_small(<32px)": 0.2576235541535226,
+    "recall_medium(32-96px)": 0.6155913978494624,
+    "recall_large(>96px)": 0.7379310344827587,
+    "gt_boxes": {
+      "person": 552,
+      "vehicle": 1018,
+      "rail_vehicle": 415
+    },
+    "mAP50-95 (ultralytics)": 0.26386944488956954,
+    "mAP50 (ultralytics)": 0.46329099168615134,
+    "ms/img": 14.422579882341191
+  }
+]

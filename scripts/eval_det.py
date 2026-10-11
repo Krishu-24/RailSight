@@ -32,7 +32,7 @@ COCO_TO_OURS = {"person": "person", "bicycle": "vehicle", "car": "vehicle", "mot
                 **{a: "animal" for a in ("bird", "cat", "dog", "horse", "sheep", "cow", "elephant",
                                          "bear", "zebra", "giraffe")}}
 
-# COCO size convention on sqrt(box area) in pixels at the 640 px evaluation size
+# COCO size convention on sqrt(box area), in original image pixels (Roboflow 640x640, RailSem19 1280x720)
 SIZE_BINS = {"small(<32px)": (0, 32), "medium(32-96px)": (32, 96), "large(>96px)": (96, 1e9)}
 IOU_THRS = np.arange(0.5, 0.96, 0.05)
 
@@ -113,12 +113,15 @@ def main():
     ap.add_argument("--device", default=None, help="e.g. cpu while the GPU is training")
     ap.add_argument("--models", nargs="*", default=None, help="run names to evaluate (default: all)")
     ap.add_argument("--limit", type=int, default=None, help="first N images only (smoke tests)")
+    ap.add_argument("--imgsz", type=int, default=640, help="inference size for every model")
     args = ap.parse_args()
 
     yml, names, paths = load_dataset(args.data, args.split)
     paths = paths[: args.limit]
     tag = args.tag or (args.split if yml.name == "data.yaml" and "det_v2" not in str(yml)
                        else f"{args.split}_{yml.parent.name}_{yml.stem}")
+    if args.imgsz != 640:
+        tag += f"_{args.imgsz}px"
     gts = load_gt(paths)
     print(f"{len(paths)} {args.split} images, classes {names}")
     rows = []
@@ -126,7 +129,7 @@ def main():
     coco = YOLO("yolo11s.pt")
     cmap = class_map(coco.names, names, COCO_TO_OURS)
     rows.append(summarize("yolo11s COCO zero-shot", names, gts,
-                          predict(coco, paths, cmap, device=args.device), cmap))
+                          predict(coco, paths, cmap, imgsz=args.imgsz, device=args.device), cmap))
 
     for w in sorted(Path("runs/det").glob("*/weights/best.pt")):
         name = w.parent.parent.name
@@ -134,9 +137,11 @@ def main():
             continue
         model = RTDETR(str(w)) if "rtdetr" in name else YOLO(str(w))
         cmap = class_map(model.names, names)
-        row = summarize(name, names, gts, predict(model, paths, cmap, device=args.device), cmap)
+        row = summarize(name, names, gts, predict(model, paths, cmap, imgsz=args.imgsz, device=args.device),
+                        cmap)
         if [model.names[i] for i in sorted(model.names)] == names:  # cross-check with Ultralytics
-            m = model.val(data=str(yml), split=args.split, verbose=False, plots=True, device=args.device,
+            m = model.val(data=str(yml), split=args.split, imgsz=args.imgsz, verbose=False, plots=True,
+                          device=args.device,
                           project=str(Path("runs/det_eval").resolve()), name=f"{name}_{tag}", exist_ok=True)
             row.update({"mAP50-95 (ultralytics)": float(m.box.map), "mAP50 (ultralytics)": float(m.box.map50),
                         "ms/img": m.speed.get("inference", float("nan"))})

@@ -22,6 +22,10 @@ def main():
                     help="batch size, or a fraction <1 of GPU memory for Ultralytics AutoBatch")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--resume", action="store_true", help="continue an interrupted run")
+    ap.add_argument("--patience", type=int, default=30)
+    ap.add_argument("--lr0", type=float, default=None,
+                    help="fixed initial LR with SGD (fine-tuning); default lets Ultralytics choose")
+    ap.add_argument("--warmup-epochs", type=float, default=3.0)
     args = ap.parse_args()
 
     cls = RTDETR if "rtdetr" in args.model else YOLO
@@ -39,7 +43,8 @@ def main():
         cls(str(last)).train(resume=True)
         return
 
-    model = cls(args.model)  # COCO-pretrained start
+    model = cls(args.model)  # COCO-pretrained start, or a trained run's weights when fine-tuning
+    optim = {"optimizer": "SGD", "lr0": args.lr0} if args.lr0 is not None else {}
     model.train(
         data=args.data,
         epochs=args.epochs,
@@ -49,11 +54,13 @@ def main():
         project=str(Path("runs/det").resolve()),  # relative paths get nested under runs/detect
         name=args.name,
         exist_ok=True,
-        patience=30,
+        patience=args.patience,
+        warmup_epochs=args.warmup_epochs,
         cos_lr=True,
         close_mosaic=10,
         seed=0,
         plots=True,
+        **optim,
     )
 
 

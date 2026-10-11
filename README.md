@@ -119,8 +119,10 @@ un-tuned COCO model, because the Roboflow images are mostly close-up, staged sce
 filtered against mask noise) and is about 7x better than v1 on cab-view frames while also slightly
 better on the Roboflow split, so it is the default. RT-DETR-l v1 (trained on Kaggle, 2x T4) has the
 highest Roboflow recall but is the slowest. Recall is measured at the operating confidence (0.25);
-object size is sqrt(box area) at 640 px. RailSem19-derived labels come from weakly supervised masks,
-and the Roboflow test has ~270 images, so small differences are within noise.
+object size is sqrt(box area) in original image pixels (Roboflow 640x640, RailSem19 1280x720, so a
+"small" RailSem19 object is under 16 px at the detector's 640 px input). RailSem19-derived labels come
+from weakly supervised masks, and the Roboflow test has ~270 images, so small differences are within
+noise.
 
 | Corridor and unknown objects (RailSem19 test) | SegFormer-B2 | DeepLabV3-ResNet50 | SegFormer-B0 |
 |---|---|---|---|
