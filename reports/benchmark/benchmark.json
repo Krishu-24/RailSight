@@ -2,39 +2,54 @@
   {
     "stage": "segmentation",
     "model": "deeplab-r50",
-    "fps": 27.719048813073744,
+    "fps": 29.823240338588054,
     "peak_mem_GB": 0.4667220115661621
   },
   {
     "stage": "segmentation",
     "model": "segformer-b0",
-    "fps": 53.8180951612017,
+    "fps": 58.70552095487269,
     "peak_mem_GB": 2.7150115966796875
   },
   {
     "stage": "segmentation",
     "model": "segformer-b2",
-    "fps": 21.03233515414431,
+    "fps": 25.444239889661773,
     "peak_mem_GB": 1.4468460083007812
   },
   {
     "stage": "detection",
-    "model": "yolo11m_rail",
-    "fps": 45.623301900722375
+    "model": "rtdetr_l_rail @640px",
+    "fps": 36.06254297973303
   },
   {
     "stage": "detection",
-    "model": "yolo11s_rail",
-    "fps": 56.953942542750184
+    "model": "yolo11m_rail @640px",
+    "fps": 69.76656247785813
+  },
+  {
+    "stage": "detection",
+    "model": "yolo11m_rail_v2 @640px",
+    "fps": 72.84487349068256
+  },
+  {
+    "stage": "detection",
+    "model": "yolo11m_rail_v2_960 @960px",
+    "fps": 76.52379928377056
+  },
+  {
+    "stage": "detection",
+    "model": "yolo11s_rail @640px",
+    "fps": 102.28445162759192
   },
   {
     "stage": "full pipeline",
     "model": "default config, segmentation every 1 frame(s)",
-    "fps": 9.790832281738254
+    "fps": 14.9765814191518
   },
   {
     "stage": "full pipeline",
     "model": "default config, segmentation every 3 frame(s)",
-    "fps": 17.72912401852392
+    "fps": 28.037505546856142
   }
 ]

@@ -62,9 +62,10 @@ def main():
     for w in sorted(Path("runs/det").glob("*/weights/best.pt")):
         name = w.parent.parent.name
         det = (RTDETR if "rtdetr" in name else YOLO)(str(w))
-        fps = timed(lambda f, d=det: d.predict(f, imgsz=640, quantize="fp16", verbose=False, device=0),
+        imgsz = 960 if name.endswith("_960") else 640  # each detector at the size it was trained for
+        fps = timed(lambda f, d=det, s=imgsz: d.predict(f, imgsz=s, quantize="fp16", verbose=False, device=0),
                     frames)
-        rows.append({"stage": "detection", "model": name, "fps": fps})
+        rows.append({"stage": "detection", "model": f"{name} @{imgsz}px", "fps": fps})
         del det
         torch.cuda.empty_cache()
 

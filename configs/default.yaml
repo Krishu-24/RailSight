@@ -2,11 +2,12 @@
 
 models:
   seg_weights: runs/seg/segformer-b2/best          # HF folder saved by scripts/train_seg.py
-  det_weights: runs/det/yolo11m_rail_v2/weights/best.pt   # v2: + RailSem19 cab-view boxes, rail_vehicle class
+  det_weights: runs/det/yolo11m_rail_v2_960/weights/best.pt   # v2 (+ RailSem19 cab-view boxes, rail_vehicle
+                          # class) fine-tuned at 960 px: best cab-view mAP, <1 FPS slower than 640 px
   device: cuda
   seg_precision: bf16     # bf16 for SegFormer-B2 / DeepLab; fp32 is faster for the tiny SegFormer-B0
   det_conf: 0.30
-  det_imgsz: 640
+  det_imgsz: 960
   det_half: true          # fp16 detector: same test mAP, faster on GPU
 
 camera:

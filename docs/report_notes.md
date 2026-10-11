@@ -132,13 +132,16 @@ So roughly **70+ cattle strikes per day** on Indian Railways. Each one also dela
    flat-ground geometry predicts.
 4. **Detection domain gap (important):** detectors fine-tuned on Roboflow images score 0.67–0.71 mAP50
    on the Roboflow test but only 0.06–0.08 on real cab-view frames (worse than un-tuned COCO, 0.19).
-   Adding ~11k boxes derived from RailSem19 masks (v2) gives 0.43 on cab-view frames (person AP 0.52)
+   Adding ~16k training boxes derived from RailSem19 masks (v2) gives 0.43 on cab-view frames (person AP 0.52)
    without losing Roboflow accuracy (0.716). Lesson: test on the deployment viewpoint.
+   **Resolution:** running v2 at 960 px lifts cab-view mAP50 to 0.462 (small-object recall 0.19 → 0.26);
+   fine-tuning at 960 px adds a little more (0.476) but no small-object recall. Distant objects remain
+   the main limitation. The 960 px model is the default and costs <1 FPS (full pipeline ~28 FPS).
 5. **Unknown objects:** class-only rule precision 0.58 / recall 0.48 / 4.9% false alarms; adding
    low-confidence pixels quadruples false alarms. Temporal persistence and a low-visibility guard
    further cut false alarms on real video.
-6. **Speed:** full pipeline 17.7 FPS on an RTX 5060 Laptop (from 15.0 after profiling-driven
-   optimisation, predictions unchanged).
+6. **Speed:** full pipeline ~28 FPS on an idle RTX 5060 Laptop (17.7-28 across sessions; profiling-driven
+   optimisation gave +41% on SegFormer-B2 back-to-back, predictions unchanged).
 7. **Negative results worth stating:** rail-pair gauge measurement (helps at merged switches, hurts
    elsewhere); motion-based vehicle mask (rails ahead are as static as the dashboard); Ultralytics
    `time=` budget silently stretches the LR schedule; YOLO11m vs YOLO11s differences are within the

@@ -1,0 +1,71 @@
+[
+  {
+    "model": "yolo11s COCO zero-shot",
+    "mAP50_all": 0.2845165930847883,
+    "mAP50_known_classes": 0.5690331861695767,
+    "mAP50_shared": 0.5690331861695767,
+    "mAP50-95": 0.1377710190494841,
+    "AP50_person": 0.6318836391046772,
+    "AP50_animal": 0.8147653394007337,
+    "AP50_vehicle": 0.2604505800033191,
+    "recall_small(<32px)": 0.3983739837398374,
+    "recall_medium(32-96px)": 0.6282420749279539,
+    "recall_large(>96px)": 0.6424731182795699,
+    "gt_boxes": {
+      "person": 464,
+      "animal": 241,
+      "vehicle": 25,
+      "rock": 46,
+      "vegetation": 18,
+      "obstacle": 48
+    }
+  },
+  {
+    "model": "yolo11m_rail_v2",
+    "mAP50_all": 0.648653525614226,
+    "mAP50_known_classes": 0.648653525614226,
+    "mAP50_shared": 0.792690644736267,
+    "mAP50-95": 0.33931288704065254,
+    "AP50_person": 0.8282222664320752,
+    "AP50_animal": 0.9083055880751463,
+    "AP50_vehicle": 0.6415440797015796,
+    "AP50_rock": 0.5252646193905359,
+    "AP50_vegetation": 0.30226867553880693,
+    "AP50_obstacle": 0.6863159245472117,
+    "recall_small(<32px)": 0.8943089430894309,
+    "recall_medium(32-96px)": 0.7867435158501441,
+    "recall_large(>96px)": 0.8172043010752689,
+    "gt_boxes": {
+      "person": 464,
+      "animal": 241,
+      "vehicle": 25,
+      "rock": 46,
+      "vegetation": 18,
+      "obstacle": 48
+    }
+  },
+  {
+    "model": "yolo11m_rail_v2_960",
+    "mAP50_all": 0.680660887850319,
+    "mAP50_known_classes": 0.680660887850319,
+    "mAP50_shared": 0.8067200463925328,
+    "mAP50-95": 0.35783933184161093,
+    "AP50_person": 0.8456200876089944,
+    "AP50_animal": 0.9105821110139463,
+    "AP50_vehicle": 0.6639579405546574,
+    "AP50_rock": 0.48526472329653897,
+    "AP50_vegetation": 0.3869556369556369,
+    "AP50_obstacle": 0.7915848276721389,
+    "recall_small(<32px)": 0.9186991869918699,
+    "recall_medium(32-96px)": 0.7694524495677233,
+    "recall_large(>96px)": 0.8145161290322581,
+    "gt_boxes": {
+      "person": 464,
+      "animal": 241,
+      "vehicle": 25,
+      "rock": 46,
+      "vegetation": 18,
+      "obstacle": 48
+    }
+  }
+]
