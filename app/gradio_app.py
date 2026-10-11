@@ -58,7 +58,7 @@ def run_image(image, speed, gauge, show_seg, hfov, ignore_below):
             f"{'yes' if a.in_path else 'no'} | **{a.level.name}** | {a.reason} |"
             for a in sorted(r.assessments, key=lambda a: a.hazard.distance_m)]
     track = ("NOT found" if not r.info["corridor"] else
-             "found, low visibility" if r.info["low_visibility"] else "found")
+             "found, low confidence" if r.info["low_confidence"] else "found")
     md = (f"### {r.state.name}\nStopping distance at {speed:.0f} km/h: "
           f"**{r.info['stop_dist_m']:.0f} m**  ·  track {track}\n\n")
     if rows:

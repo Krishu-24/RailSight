@@ -24,6 +24,8 @@ def _video(args):
         cfg["camera"]["hfov_deg"] = args.hfov
     if args.ignore_below is not None:
         cfg["camera"]["ignore_below"] = args.ignore_below
+    if args.ignore_region:
+        cfg["camera"]["ignore_regions"] = [[float(v) for v in r.split(",")] for r in args.ignore_region]
     pipe = RailSightPipeline(cfg, show_seg=args.show_seg)
     if args.speed is not None:
         pipe.speed_kmh = args.speed
@@ -53,6 +55,9 @@ def main(argv=None):
                    help="camera horizontal field of view in degrees (sets the ranging scale)")
     v.add_argument("--ignore-below", type=float, default=None,
                    help="fraction of image height showing the train itself (dashboard, hood)")
+    v.add_argument("--ignore-region", action="append", metavar="COORDS",
+                   help="image region showing the train itself: X0,Y0,X1,Y1 rectangle or "
+                        "X,Y,X,Y,... polygon (fractions of the image); repeatable")
     v.add_argument("--out", default="outputs", help="output folder")
     v.add_argument("--max-seconds", type=float, default=None, help="process only the first N seconds")
     v.add_argument("--show-seg", action="store_true", help="blend the segmentation map in")

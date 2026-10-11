@@ -48,7 +48,7 @@ override single values.
 | Key | Default | Meaning |
 |---|---|---|
 | `enabled` | true | Turn the check on or off |
-| `min_track_conf` | 0.70 | Below this segmentation confidence on the track (darkness, glare) the check is skipped and the HUD shows LOW VISIBILITY |
+| `min_track_conf` | 0.70 | Below this segmentation confidence on the track (darkness, glare) the check is skipped and the HUD shows LOW CONFIDENCE |
 | `half_width_m` | 1.0 | Search only the track bed |
 | `persist_updates` | 3 | Consecutive segmentation updates an object must survive (~0.3 s) |
 | `min_size_m`, `min_area_px` | 0.3, 30 | Minimum physical width at the object's distance, and a pixel floor |

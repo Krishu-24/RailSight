@@ -27,6 +27,6 @@ The shaded corridor is the space the train will sweep through; its colour is the
 (green SAFE, amber WARNING, red CRITICAL). White ticks mark distance along the track and the red line
 marks where the train could stop at the current speed. Boxes are detected objects with their distance;
 magenta outlines are unknown objects found inside the track. The panel shows speed, stopping distance,
-the nearest hazard in the path, whether the track is locked (or low visibility) and the frame rate.
+the nearest hazard in the path, whether the track is locked (or low confidence) and the frame rate.
 
 Needs the trained weights (see the main README, *Quick start*).

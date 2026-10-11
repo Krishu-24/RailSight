@@ -91,7 +91,7 @@ flowchart LR
 | Obstacle detection | YOLO11m v2 at 960 px, compared with YOLO11s / YOLO11m / RT-DETR-l v1 | fine-tuned (Roboflow + RailSem19 boxes) |
 | Danger corridor | Ego-track tracing with robust width and centre fits, limited to rows where the track is visible | geometry |
 | Distance | `Z = f · gauge / projected_gauge(row)` | geometry |
-| Unknown objects | Non-track pixels inside the track, confirmed over 3 segmentation updates; off in low visibility | uses segmentation |
+| Unknown objects | Non-track pixels inside the track, confirmed over 3 segmentation updates; off when the track confidence is low | uses segmentation |
 | Tracking | ByteTrack | off-the-shelf |
 | Risk | Stopping distance `v·t + v²/2a`, in-path test over the arrival window, hysteresis | rules |
 

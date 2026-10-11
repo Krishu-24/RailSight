@@ -142,8 +142,8 @@ class RailSightPipeline:
             for i, (box, label, _conf, tid) in enumerate(dets):
                 hz = self._to_hazard(box, label, tid, t_s, cor)
                 det_a[i] = self._assess(hz, v, stop_d) if hz is not None else None
-            low_visibility = self.track_conf < ac.get("min_track_conf", 0.0)
-            if ac["enabled"] and self.labels is not None and not low_visibility:
+            low_confidence = self.track_conf < ac.get("min_track_conf", 0.0)
+            if ac["enabled"] and self.labels is not None and not low_confidence:
                 blobs = find_foreign_blobs(self.labels, self.conf, cor, ac["half_width_m"],
                                            ac["conf_threshold"], ac["min_size_m"],
                                            ac["min_area_px"], rc["max_range_m"],
@@ -167,21 +167,34 @@ class RailSightPipeline:
                 "stop_dist_m": round(stop_d, 1), "n_detections": len(dets),
                 "n_unknown": len(blobs), "nearest_in_path_m": None if nearest is None else round(nearest, 1),
                 "corridor": cor is not None, "track_conf": round(self.track_conf, 3),
-                "low_visibility": cor is not None and self.track_conf < ac.get("min_track_conf", 0.0),
-                "fps": round(self._fps, 1)}
+                "low_confidence": cor is not None and self.track_conf < ac.get("min_track_conf", 0.0),
+                "labels": "|".join(d[1] for d in dets), "fps": round(self._fps, 1)}
         img = self._render(frame, dets, det_a, blobs, blob_a, state, stop_d, info)
         self.frame_idx += 1
         return FrameResult(img, state, observed, assessments, info)
 
     # ------------------------------------------------------------------ helpers
     def _vehicle_mask(self, shape) -> np.ndarray | None:
-        """Image region showing the train itself (dashboard, hood), set once per camera mounting."""
-        frac = self.cfg["camera"].get("ignore_below")
-        if not frac:
+        """Image regions showing the train itself (dashboard, hood, the side of the coach), set once
+        per camera mounting: `ignore_below` (fraction of height) and `ignore_regions`, each either a
+        rectangle [x0, y0, x1, y1] or a polygon [x0, y0, x1, y1, x2, y2, ...] (fractions of the image;
+        six or more numbers = polygon, e.g. a coach receding to the vanishing point)."""
+        cam = self.cfg["camera"]
+        frac, regions = cam.get("ignore_below"), cam.get("ignore_regions") or []
+        if not frac and not regions:
             return None
-        m = np.zeros(shape, bool)
-        m[int(frac * shape[0]) :] = True
-        return m
+        h, w = shape
+        m = np.zeros(shape, np.uint8)
+        if frac:
+            m[int(frac * h) :] = 1
+        for r in regions:
+            if len(r) == 4:
+                x0, y0, x1, y1 = r
+                m[int(y0 * h) : int(y1 * h), int(x0 * w) : int(x1 * w)] = 1
+            else:
+                pts = np.array([[r[i] * w, r[i + 1] * h] for i in range(0, len(r) - 1, 2)], np.int32)
+                cv2.fillPoly(m, [pts], 1)
+        return m.astype(bool)
 
     def _to_hazard(self, box, label, tid, t_s, cor: Corridor) -> Hazard | None:
         x1, y1, x2, y2 = box
@@ -266,8 +279,8 @@ class RailSightPipeline:
         lines = [
             f"speed {info['speed_kmh']:.0f} km/h   stop {info['stop_dist_m']:.0f} m",
             f"nearest in path: {'-' if near is None else f'{near:.0f} m'}",
-            ("track: NOT FOUND" if not info["corridor"] else "track: LOW VISIBILITY"
-             if info["low_visibility"] else "track: locked") + f"   {info['fps']:.0f} fps",
+            ("track: NOT FOUND" if not info["corridor"] else "track: LOW CONFIDENCE"
+             if info["low_confidence"] else "track: locked") + f"   {info['fps']:.0f} fps",
         ]
         for i, s in enumerate(lines):
             cv2.putText(img, s, (10, 56 + 22 * i), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (235, 235, 235), 1,
