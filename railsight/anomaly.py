@@ -11,8 +11,8 @@ from dataclasses import dataclass
 import cv2
 import numpy as np
 
+from .classes import GROUND_IDS
 from .corridor import Corridor
-from .seg import GROUND_IDS
 
 
 @dataclass
@@ -58,3 +58,28 @@ def find_foreign_blobs(
                                    cv2.CHAIN_APPROX_SIMPLE)
         blobs.append(Blob((x, y, x + w, y + h), int(area), cnts[0]))
     return blobs
+
+
+def _near(a, b) -> bool:
+    """Box centres closer than the larger box side (tolerates motion between updates)."""
+    ax, ay, bx, by = (a[0] + a[2]) / 2, (a[1] + a[3]) / 2, (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
+    size = max(a[2] - a[0], a[3] - a[1], b[2] - b[0], b[3] - b[1], 8)
+    return abs(ax - bx) < size and abs(ay - by) < size
+
+
+class BlobPersistence:
+    """Keep only unknown objects seen at roughly the same place on `need` consecutive
+    segmentation updates; one-update flicker (glare, far-range noise) is dropped."""
+
+    def __init__(self, need: int = 3):
+        self.need = need
+        self.tracks: list[tuple[tuple, int]] = []  # (box, consecutive updates seen)
+
+    def update(self, blobs: list[Blob], seg_updated: bool) -> list[Blob]:
+        if self.need <= 1:
+            return blobs
+        if seg_updated:
+            self.tracks = [(b.box, max((n for box, n in self.tracks if _near(b.box, box)), default=0) + 1)
+                           for b in blobs]
+        confirmed = [box for box, n in self.tracks if n >= self.need]
+        return [b for b in blobs if any(_near(b.box, c) for c in confirmed)]

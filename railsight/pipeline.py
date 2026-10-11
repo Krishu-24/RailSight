@@ -9,7 +9,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from .anomaly import find_foreign_blobs
+from .anomaly import BlobPersistence, find_foreign_blobs
 from .config import ROOT
 from .corridor import Corridor, focal_from_hfov, select_ego_track
 from .risk import (
@@ -65,7 +65,7 @@ class RailSightPipeline:
         self.corridor: Corridor | None = None
         self.labels = self.conf = None
         self.track_conf = 1.0
-        self._blob_tracks: list[tuple[tuple, int]] = []  # (box, consecutive segmentation updates seen)
+        self.persistence = BlobPersistence(self.cfg["anomaly"].get("persist_updates", 1))
         self.frame_idx = 0
         self.history = defaultdict(lambda: deque(maxlen=30))  # track id -> (t, lateral_m)
         r = self.cfg["risk"]
@@ -141,7 +141,7 @@ class RailSightPipeline:
                                            ac["conf_threshold"], ac["min_size_m"],
                                            ac["min_area_px"], rc["max_range_m"],
                                            [d[0] for d in dets], ignore_mask=own)
-                blobs = self._persistent(blobs, seg_updated, ac.get("persist_updates", 1))
+                blobs = self.persistence.update(blobs, seg_updated)
                 for b in blobs:
                     hz = self._to_hazard(np.array(b.box, float), "unknown", -1, t_s, cor)
                     blob_a.append(self._assess(hz, v, stop_d) if hz is not None else None)
@@ -167,26 +167,6 @@ class RailSightPipeline:
         return FrameResult(img, state, observed, assessments, info)
 
     # ------------------------------------------------------------------ helpers
-    def _persistent(self, blobs, seg_updated: bool, need: int):
-        """Keep only unknown objects seen at roughly the same place on `need` consecutive
-        segmentation updates; single-update flicker (glare, far-range noise) is dropped."""
-        if need <= 1:
-            return blobs
-
-        def near(a, b):
-            ax, ay, bx, by = (a[0] + a[2]) / 2, (a[1] + a[3]) / 2, (b[0] + b[2]) / 2, (b[1] + b[3]) / 2
-            size = max(a[2] - a[0], a[3] - a[1], b[2] - b[0], b[3] - b[1], 8)
-            return abs(ax - bx) < size and abs(ay - by) < size
-
-        if seg_updated:
-            tracks = []
-            for b in blobs:
-                hits = max((n for box, n in self._blob_tracks if near(b.box, box)), default=0)
-                tracks.append((b.box, hits + 1))
-            self._blob_tracks = tracks
-        confirmed = [box for box, n in self._blob_tracks if n >= need]
-        return [b for b in blobs if any(near(b.box, c) for c in confirmed)]
-
     def _vehicle_mask(self, shape) -> np.ndarray | None:
         """Image region showing the train itself (dashboard, hood), set once per camera mounting."""
         frac = self.cfg["camera"].get("ignore_below")
