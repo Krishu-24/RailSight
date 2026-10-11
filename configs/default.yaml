@@ -1,7 +1,7 @@
 # RailSight runtime configuration (inference pipeline + demo)
 
 models:
-  seg_weights: runs/seg/segformer-b2/best          # HF folder saved by scripts/train_seg.py
+  seg_weights: runs/seg/segformer-b2/best          # HF folder saved by scripts/train/train_seg.py
   det_weights: runs/det/yolo11m_rail_v2_960/weights/best.pt   # v2 (+ RailSem19 cab-view boxes, rail_vehicle
                           # class) fine-tuned at 960 px: best cab-view mAP, <1 FPS slower than 640 px
   device: cuda
@@ -47,4 +47,4 @@ anomaly:
   min_size_m: 0.3         # an unknown object must be at least this wide at its distance
   min_area_px: 30         # absolute floor against pixel noise
   conf_threshold: 0.0     # 0 = only non-ground classes count; low-confidence pixels add false
-                          # alarms on class boundaries (see scripts/eval_scene.py)
+                          # alarms on class boundaries (see scripts/eval/eval_scene.py)

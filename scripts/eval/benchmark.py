@@ -1,7 +1,7 @@
 """Inference speed on this GPU: every trained segmentation model and detector, and the full
 pipeline. Run only when no training is using the GPU.
 
-    python scripts/benchmark.py
+    python scripts/eval/benchmark.py
 """
 
 import argparse

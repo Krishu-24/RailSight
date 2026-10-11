@@ -1,6 +1,6 @@
 """Report figure: how far ahead must a hazard be seen, and how big is it on the sensor then?
 
-    python scripts/plot_stopping.py
+    python scripts/tools/plot_stopping.py
 """
 
 from pathlib import Path
@@ -11,7 +11,7 @@ import numpy as np
 from railsight.corridor import focal_from_hfov
 from railsight.risk import stopping_distance
 
-OUT = Path("reports/figures")
+OUT = Path("docs/assets")
 
 
 def main():

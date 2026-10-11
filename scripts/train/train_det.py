@@ -1,7 +1,7 @@
 """Fine-tune YOLO11 on the merged railway-obstacle dataset.
 
-    python scripts/train_det.py --model yolo11s.pt --name yolo11s_rail
-    python scripts/train_det.py --model yolo11n.pt --name yolo11n_rail --epochs 60
+    python scripts/train/train_det.py --model yolo11s.pt --name yolo11s_rail
+    python scripts/train/train_det.py --model yolo11n.pt --name yolo11n_rail --epochs 60
 """
 
 import argparse

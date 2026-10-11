@@ -1,7 +1,8 @@
 [project]
 name = "railsight"
-version = "0.1.0"
+version = "1.0.0"
 description = "Vision-based railway hazard detection and collision-risk estimation"
+authors = [{ name = "Arnav Keshav Sinha" }, { name = "Faizaan Naiman Naveed Nasir" }]
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 dependencies = [
@@ -20,6 +21,9 @@ dependencies = [
     "lap",
     "imageio[ffmpeg]>=2.34",
 ]
+
+[project.scripts]
+railsight = "railsight.cli:main"
 
 [dependency-groups]
 dev = ["pytest", "ruff"]

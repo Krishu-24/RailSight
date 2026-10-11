@@ -1,4 +1,4 @@
-# Training the larger detectors on Kaggle
+# Training detectors on Kaggle
 
 Kaggle's free GPUs (2× T4, 30 GPU-hours/week) train **YOLO11m** and **RT-DETR-l** while the laptop
 trains the segmentation models. Only the detection dataset goes to Kaggle (Roboflow sources,
@@ -54,16 +54,23 @@ differences of a few points are within noise, so the larger model's gain is smal
 ## Bringing results back
 
 1. Open the finished version → **Output** tab → download `yolo11m_rail.zip` (or `rtdetr_l_rail.zip`).
-2. Put the zip in the laptop's `RailSight/data/incoming/`.
-3. Tell Claude. The zip is unpacked into `runs/det/<name>/`, where `scripts/eval_det.py` picks it up.
+   The output also contains Ultralytics' starting weights (`yolo11m.pt`, `weights/yolo26n.pt`); they are
+   not needed.
+2. Unpack it into `runs/det/` (it already contains the run folder) and remove the `REMOTE` marker:
+
+   ```bash
+   unzip yolo11m_rail.zip -d runs/det/ && rm -f runs/det/yolo11m_rail/REMOTE
+   ```
+
+3. `scripts/eval/eval_det.py` picks the new run up automatically.
 
 ## How the laptop avoids duplicate work
 
-`runs/det/yolo11m_rail/REMOTE` and `runs/det/rtdetr_l_rail/REMOTE` tell `scripts/train_det.py`
+`runs/det/yolo11m_rail/REMOTE` and `runs/det/rtdetr_l_rail/REMOTE` tell `scripts/train/train_det.py`
 to skip these runs. If a Kaggle run fails, delete the marker and run on the laptop:
 
 ```bash
-uv run python scripts/train_det.py --model rtdetr-l.pt --name rtdetr_l_rail --batch 0.7
+uv run python scripts/train/train_det.py --model rtdetr-l.pt --name rtdetr_l_rail --batch 0.7
 ```
 
 ## Differences from laptop training (for the report)

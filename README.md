@@ -1,94 +1,114 @@
+<div align="center">
+
 # RailSight
 
+**Vision-based railway hazard detection and collision-risk estimation from a forward-facing train camera**
+
 [![CI](https://github.com/Krishu-24/RailSight/actions/workflows/ci.yml/badge.svg)](https://github.com/Krishu-24/RailSight/actions/workflows/ci.yml)
+![Python 3.11](https://img.shields.io/badge/python-3.11-3776AB?logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.11%20%C2%B7%20CUDA%2012.8-EE4C2C?logo=pytorch&logoColor=white)
+![Status](https://img.shields.io/badge/status-academic%20prototype-6f42c1)
 
-**Vision-based railway hazard detection and collision-risk estimation from a forward-facing train camera.**
+![RailSight on cab-view footage](docs/assets/demo.gif)
 
-RailSight does more than detect objects. For every hazard it answers the two questions that matter to a
-train, which cannot steer around an obstacle:
+<sub>Free Pexels clips · SegFormer-B2 + YOLO11m v2 on an RTX 5060 Laptop GPU · corridor colour = risk state, white ticks = distance along the track</sub>
 
-1. **Is it in the train's path?** A segmentation model finds the ego track and builds a metric
-   *danger corridor* (the space the train will sweep through).
-2. **Can the train still stop?** The rail gauge acts as a known-size ruler, which turns pixels into
-   metres; the distance is compared with the braking distance at the current speed.
+</div>
 
-The result is an interpretable **SAFE / WARNING / CRITICAL** state per frame.
+A train cannot steer around an obstacle, so "there is a person in the image" is not enough. For every
+hazard RailSight answers the two questions that matter:
 
-![RailSight on cab-view footage](docs/demo.gif)
+1. **Is it in the train's path?** A segmentation model finds the ego track and builds a metric *danger
+   corridor*, the space the train will sweep through.
+2. **Can the train still stop?** The rail gauge is a known-size ruler that turns pixels into metres; the
+   distance is compared with the braking distance at the current speed.
 
-_Free Pexels clips; SegFormer-B2 + YOLO11m v2 on an RTX 5060 Laptop GPU. The corridor colour is the current risk state, white ticks mark distance along the track._
+The answer is an interpretable **SAFE / WARNING / CRITICAL** state for every frame, in real time.
 
-> Academic prototype (MAHE, School of Computer Engineering) for perception and decision support.
-> It is **not** a certified signalling or braking system.
+> Academic prototype (Manipal Academy of Higher Education, School of Computer Engineering) for
+> perception and decision support. It is **not** a certified signalling or braking system.
+
+**[Project report (PDF)](docs/RailSight_Report.pdf)** · [How it works](#how-it-works) · [Results](#results) ·
+[Quick start](#quick-start) · [What we learned](#what-we-learned)
+
+---
+
+## Highlights
+
+- **Real time:** about 28 FPS for the full pipeline on a laptop GPU (RTX 5060 Laptop, 8 GB).
+- **Finds the ego track** on 99.9% of RailSem19 test frames; segmentation adds only 3.8 / 7.3 / 13.5%
+  ranging error at 25 / 50 / 100 m.
+- **Distances without a depth sensor or calibration:** rail-gauge ranging agrees with an independent
+  human-height cue to within 0.5% on average (708 people at track level).
+- **Detection that transfers to real cab-view footage:** adding ~16k boxes mined from RailSem19 masks
+  raised cab-view mAP50 from under 0.08 to 0.48, where detectors tuned on web images had failed.
+- **Unknown objects:** anything inside the track that is not track bed is flagged, even without a class.
+- Everything is measured: every number in this README is regenerated from `reports/` by a script.
+
+---
+
+## Quick start
+
+```bash
+git clone https://github.com/Krishu-24/RailSight.git && cd RailSight
+uv sync                     # Python 3.11 + PyTorch for CUDA 12.8 (RTX 50-series ready)
+```
+
+Get the trained weights (shared privately, see [Data and licences](#data-and-licences)) and unzip the
+package in the repository root, then:
+
+```bash
+uv run railsight demo                                        # interactive app (video + image tabs)
+uv run railsight video data/videos/clip.mp4 --speed 80       # annotated video, per-frame log, timeline
+uv run python scripts/data/fetch_demo_videos.py              # the free demo clips used above
+```
+
+Per-camera options: `--hfov` (horizontal field of view, sets the distance scale) and `--ignore-below`
+(fraction of the image showing the train itself, e.g. a dashboard). Everything else is in
+[`configs/default.yaml`](configs/default.yaml) ([explained here](configs/README.md)).
 
 ---
 
 ## How it works
 
-```
-frame ─► SegFormer (RailSem19, 19 classes) ─► ego track ─► corridor fit ─► metric danger corridor
-     │                                                          │  (gauge → px-per-metre per row)
-     ├─► YOLO11 / RT-DETR (fine-tuned) ─► ByteTrack ──────────┐ │
-     └─► foreign-pixel check inside the track (class-agnostic) ┤ │
-                                                               ▼ ▼
-            distance (pinhole + gauge) · lateral offset · lateral speed (from track history)
-                                                               │
-       speed + reaction time + braking ─► rule-based risk ─► hysteresis ─► SAFE / WARNING / CRITICAL
+```mermaid
+flowchart LR
+    F[Camera frame] --> S[SegFormer-B2<br/>19-class rail scene]
+    F --> D[YOLO11m v2<br/>person · animal · vehicle<br/>rock · vegetation · obstacle · rail vehicle]
+    S --> C[Ego track and<br/>metric corridor]
+    S --> U[Unknown objects<br/>inside the track]
+    D --> T[ByteTrack]
+    C --> G[Distance from rail gauge<br/>lateral offset and speed]
+    T --> G
+    U --> G
+    G --> R[Braking physics<br/>+ in-path prediction]
+    R --> H[Hysteresis] --> O[SAFE / WARNING / CRITICAL]
 ```
 
-| Stage | Method | Trained by us? |
+| Stage | Method | Learned? |
 |---|---|---|
-| Rail-scene segmentation | SegFormer-B2 (vs B0, DeepLabV3-ResNet50) | ✅ fine-tuned on RailSem19 |
-| Obstacle detection | YOLO11m v2 (default) vs YOLO11s / YOLO11m / RT-DETR-l v1 | ✅ fine-tuned on Roboflow obstacle data (+ RailSem19 cab-view boxes for v2) |
-| Danger corridor | Row-wise ego-track tracing + robust width/centre fits, limited to rows where the track is visible | geometry |
+| Rail-scene segmentation | SegFormer-B2, compared with SegFormer-B0 and DeepLabV3-ResNet50 | fine-tuned on RailSem19 |
+| Obstacle detection | YOLO11m v2 at 960 px, compared with YOLO11s / YOLO11m / RT-DETR-l v1 | fine-tuned (Roboflow + RailSem19 boxes) |
+| Danger corridor | Ego-track tracing with robust width and centre fits, limited to rows where the track is visible | geometry |
 | Distance | `Z = f · gauge / projected_gauge(row)` | geometry |
-| Unknown objects | Non-ground pixels inside the track, confirmed over 3 segmentation updates; skipped when track confidence is low (darkness, glare) | uses the segmentation model |
+| Unknown objects | Non-track pixels inside the track, confirmed over 3 segmentation updates; off in low visibility | uses segmentation |
 | Tracking | ByteTrack | off-the-shelf |
-| Risk | Stopping distance `v·t_r + v²/2a`, in-path test over an arrival time window, hysteresis | rules |
+| Risk | Stopping distance `v·t + v²/2a`, in-path test over the arrival window, hysteresis | rules |
 
-### Why rail-gauge ranging
-On flat track the projected rail gauge shrinks linearly towards the horizon. Fitting
-`width(y) = a·y + b` to the segmented track gives the horizon row and a pixels-per-metre scale at
-every image row. With gauge 1.435 m (standard) or 1.676 m (Indian broad gauge), the distance of
-any object touching the ground at row `y` is `Z = f · G / width(y)`. The same scale widens the
-corridor to the real train width (3.2 m + margin) regardless of how far away a row is.
+**Why rail-gauge ranging.** On flat track the projected gauge shrinks linearly towards the horizon. A
+line fitted to the track width per image row gives the horizon and a pixels-per-metre scale at every
+row, so anything touching the ground at row `y` is `Z = f · G / width(y)` away (G = 1.435 m standard,
+1.676 m Indian broad gauge). The same scale widens the corridor to the real train width.
 
-### Why the risk is rule-based
-No dataset labels "this frame was dangerous", and a safety decision should be explainable, so the
-learned parts handle perception and the decision is made by transparent physics.
-
----
-
-## Data
-
-| Dataset | Used for | Notes |
-|---|---|---|
-| [RailSem19](https://wilddash.cc/railsem19) | Segmentation | 8,500 frames, 19 classes; fixed 80/10/10 split (seed 0) |
-| [railway (goal)](https://universe.roboflow.com/goal-lmqiu/railway-tfabb) | Detection | MIT; 11 classes |
-| [Railway track obstacle detection](https://universe.roboflow.com/railway-research/railway-track-obstacle-detection-gca3w) | Detection | CC BY 4.0; 6 classes |
-
-**Detection data cleaning** (`scripts/prepare_detection.py`), based on an audit of the raw exports:
-- Classes are mapped onto six hazards: `person, animal, vehicle, rock, vegetation, obstacle`.
-- `Plant` (74% of boxes in one source: weeds between sleepers seen by a top-down inspection
-  camera), standing `Tree`s and `flood` are not obstacles in the train's path, so they were dropped.
-- The original splits **leaked**: Roboflow's augmented copies and consecutive video frames appeared
-  in both train and test. Images are grouped by source filename and perceptual hash (dHash), and
-  whole groups are re-split 80/10/10 with stratification on the rarest class. Val/test contain no
-  augmented copies.
-
-**Detection data v2** (`scripts/prepare_detection_v2.py`): the Roboflow set plus boxes derived from
-RailSem19's dense masks (connected components of `human`, `car`/`truck` and `on-rails`), filtered
-against mask noise (minimum size and fill ratio, no small border fragments, rail vehicles must stand
-on track). This adds ~16k training boxes (person / vehicle / `rail_vehicle`) from real cab-view frames, keeps
-the segmentation split (RailSem19 test frames stay unseen), and stays on the local machine because
-RailSem19's licence forbids redistribution.
+**Why the risk is rule-based.** No dataset labels "this frame was dangerous", and a safety decision
+should be explainable, so learning handles perception and transparent physics makes the decision.
 
 ---
 
 ## Results
 
 <!-- results:start -->
-_Generated by `scripts/make_readme_tables.py` from `reports/` and `runs/`._
+_Generated by `scripts/tools/make_readme_tables.py` from `reports/` and `runs/`._
 
 | Segmentation (RailSem19 test, 850 frames) | mIoU (19 classes) | track IoU | FPS |
 |---|---|---|---|
@@ -174,80 +194,101 @@ between 17.7 and 28.0 FPS across sessions; the table shows the latest run on an 
 
 ---
 
-## Setup
+## Data and licences
 
-Requires an NVIDIA GPU. The lockfile pins PyTorch built for CUDA 12.8, which RTX 50-series cards need.
+| Dataset | Used for | Licence / access |
+|---|---|---|
+| [RailSem19](https://wilddash.cc/railsem19) | Segmentation; mined detection boxes (v2) | Free registration per person; frames must not be redistributed |
+| [railway (goal)](https://universe.roboflow.com/goal-lmqiu/railway-tfabb) | Detection | MIT |
+| [Railway track obstacle detection](https://universe.roboflow.com/railway-research/railway-track-obstacle-detection-gca3w) | Detection | CC BY 4.0 |
+| [Pexels](https://www.pexels.com/license/) cab-ride clips | Qualitative demos | Pexels licence (free to use) |
 
-```bash
-uv sync
-uv run pytest
-```
+**Detection data v1** ([`prepare_detection.py`](scripts/data/prepare_detection.py)). An audit of the
+Roboflow exports found that 74% of one set's boxes were weeds between sleepers seen by a top-down
+inspection camera, and that the published splits **leaked** (augmented copies and consecutive video
+frames in both train and test). Non-hazard classes were dropped, the rest mapped onto six hazards,
+and near-duplicates grouped by perceptual hash before a stratified 80/10/10 re-split.
+
+**Detection data v2** ([`prepare_detection_v2.py`](scripts/data/prepare_detection_v2.py)). Adds ~16k
+training boxes (person, vehicle and a new `rail_vehicle` class) mined from RailSem19's dense masks
+and filtered against mask noise. It keeps the segmentation split, so RailSem19 test frames stay unseen.
+
+Because RailSem19 may not be redistributed, data, trained weights and RailSem19-based outputs are not
+in this repository. The weights are shared privately with the team, guide and examiners
+([`package_weights.py`](scripts/tools/package_weights.py)).
+
+---
 
 ## Reproduce
 
-```bash
-# data (place raw downloads under data/raw/, see the table above)
-uv run python scripts/prepare_detection.py
-uv run python scripts/prepare_railsem19.py
-uv run python scripts/prepare_detection_v2.py      # + boxes from RailSem19 masks (local only, licence)
-uv run python scripts/fetch_demo_videos.py         # free Pexels demo clips -> data/videos/
-
-# every training run, one GPU job at a time (pass a step number to resume)
-bash scripts/train_all.sh
-
-# evaluation tables -> reports/
-uv run python scripts/eval_det.py
-uv run python scripts/train_seg.py --arch segformer-b2 --eval-only --split test
-uv run python scripts/eval_scene.py --weights runs/seg/segformer-b2/best --split test   # -> reports/scene_segformer-b2/
-uv run python scripts/eval_ranging_consistency.py   # gauge vs human-height distance, no calibration needed
-uv run python scripts/benchmark.py                  # FPS of every model and the full pipeline
-uv run python scripts/make_readme_tables.py         # refresh the Results section above
-uv run python scripts/make_demo_gif.py              # docs/demo.gif from outputs/final
-```
-
-The two larger detectors were trained on Kaggle's free GPUs: see [`kaggle/README.md`](kaggle/README.md).
-
-## Run
+Every step is a script; see **[scripts/README.md](scripts/README.md)** for the full list.
 
 ```bash
-uv run python scripts/run_video.py data/videos/clip.mp4 --speed 80   # annotated video + log + timeline
-uv run python app/gradio_app.py                                      # interactive demo
+uv run python scripts/data/prepare_railsem19.py     # after downloading the datasets to data/raw/
+uv run python scripts/data/prepare_detection_v2.py
+bash scripts/train/train_all.sh                     # every training run, resumable
+uv run python scripts/eval/eval_det.py              # and the other evaluations -> reports/
+uv run python scripts/tools/make_readme_tables.py   # refresh the Results section
 ```
 
-Per-camera options: `--hfov` (horizontal field of view, which sets the distance scale) and
-`--ignore-below` (fraction of the image height that shows the train itself, e.g. a dashboard).
-Everything else (gauge, braking, margins, thresholds) is in [`configs/default.yaml`](configs/default.yaml).
+The larger detectors were trained on Kaggle's free GPUs: see [kaggle/README.md](kaggle/README.md).
 
-## Repository layout
+---
+
+## Project structure
 
 ```
-railsight/   corridor.py  risk.py  seg.py  anomaly.py  pipeline.py  video.py  metrics.py  datasets.py
-scripts/     prepare_*.py  train_*.py  eval_*.py  benchmark.py  run_video.py  make_readme_tables.py
-kaggle/      notebook + guide for training detectors on Kaggle
-docs/        report notes (sourced statistics, related systems)
-app/         gradio_app.py
-configs/     default.yaml
-tests/       geometry, risk logic, metrics and unknown-object persistence unit tests
+RailSight/
+├── railsight/        the library: segmentation, corridor geometry, risk, pipeline, CLI  → railsight/README.md
+├── app/              Gradio demo                                                       → app/README.md
+├── configs/          default.yaml: models, camera, track, braking, thresholds          → configs/README.md
+├── scripts/          data / train / eval / tools                                       → scripts/README.md
+├── kaggle/           notebook and guide for training detectors on Kaggle
+├── reports/          every evaluation result as JSON + Markdown, and figures           → reports/README.md
+├── docs/             project report (PDF), report notes, assets                        → docs/README.md
+└── tests/            unit tests for geometry, risk, metrics and unknown-object logic
 ```
+
+---
+
+## What we learned
+
+- **Test on the deployment viewpoint.** Detectors scoring 0.67–0.71 mAP50 on a web-image test set
+  scored under 0.08 on real cab-view frames, below an un-tuned COCO model. Mining in-domain boxes from
+  RailSem19's masks fixed it (0.48).
+- **Audit public datasets before training.** One "railway obstacle" set was mostly weeds, and both
+  published splits leaked between train and test.
+- **The metric that matters may not be the standard one.** DeepLabV3 matched SegFormer-B2 on track IoU
+  but produced ~20% worse distances.
+- **Measure before optimising.** Profiling showed the segmentation network, not the logic, was the
+  bottleneck; fused attention and bf16 gave +41% with identical predictions.
+- **Real video exposes what test sets do not:** a camera seeing its own dashboard, darkness, and
+  one-frame flicker each needed a specific fix, while some ideas (a motion-based vehicle mask,
+  rail-pair gauge measurement) were tried, measured and dropped.
+
+The full story, including what did not work, is in the **[project report](docs/RailSight_Report.pdf)**.
+
+---
 
 ## Limitations
 
-- Gauge ranging assumes locally flat track and a known (or assumed) focal length; error grows with
-  distance as the projected gauge shrinks to a few pixels.
-- At 100 km/h the stopping distance is about 440 m, where a person is only a few pixels tall for a
-  standard camera. Monocular perception mainly helps at lower speeds and in yards and at crossings.
-- Switches: the ego path follows the branch closest to the previous row, which is not necessarily
-  the route the train will take. Where tracks merge, the corridor gets too wide and distances too
-  short (an experimental rail-pair gauge measurement, `track.rail_pairs`, helps there but hurts
-  elsewhere, so it is off).
-- Absolute distance accuracy was not measured against lidar (OSDaR23's server was unavailable);
-  the calibration-free human-height check shows no scale bias at track level but a wide spread.
-- Cameras inside the cab see their own dashboard, which segmentation can mistake for track: set
-  `--ignore-below` once per mounting. At level crossings rails embedded in the road are partly
-  segmented as road. In darkness the unknown-object check switches off (shown as LOW VISIBILITY).
-- Evaluation sets are small (268 Roboflow test images), so detector differences of a few points
-  are within noise; RailSem19-derived boxes come from weakly supervised masks.
+- **Distant objects:** recall for small (far) objects is about 0.25. At 100 km/h a train needs ~440 m
+  to stop, where a person is a few pixels tall, so a single camera helps most at lower speeds, in yards,
+  at stations and level crossings.
+- **Ranging** assumes locally flat track and a known or assumed focal length; error grows with distance.
+  Absolute accuracy was not checked against lidar (the OSDaR23 server was unavailable).
+- **Switches and merged tracks** widen the corridor and shorten distances; level-crossing rails embedded
+  in the road are partly segmented as road; darkness switches the unknown-object check off.
+- **Small evaluation sets** (268 Roboflow test images) and weakly supervised RailSem19 labels: small
+  differences between models are within noise.
 
-## Team
+---
 
-Arnav Keshav Sinha · Faizaan Naiman Naveed Nasir. Guide: Dr. Jayita Saha.
+## Acknowledgements
+
+RailSem19 (AIT Austrian Institute of Technology), the Roboflow Universe dataset authors, and the Pexels
+videographers for the data; SegFormer (NVIDIA, via Hugging Face Transformers), DeepLabV3 (torchvision),
+YOLO11 / RT-DETR and ByteTrack (Ultralytics) for the models; Kaggle for free GPU time. Development was
+assisted by Claude Code (Anthropic), an AI coding assistant.
+
+**Team:** Arnav Keshav Sinha · Faizaan Naiman Naveed Nasir — **Guide:** Dr. Jayita Saha

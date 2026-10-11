@@ -18,7 +18,7 @@ low-confidence pixels as suspicious. Each variant is scored with
 
 Segmentation outputs are cached, so variants can be re-scored without re-running the model.
 
-    python scripts/eval_scene.py --weights runs/seg/segformer-b2/best --split test
+    python scripts/eval/eval_scene.py --weights runs/seg/segformer-b2/best --split test
 """
 
 import argparse
@@ -159,14 +159,14 @@ def main():
     print("corridor:", json.dumps(corridor, indent=2))
     with open(out / f"corridor_{args.split}.json", "w", encoding="utf-8") as f:
         json.dump(corridor, f, indent=2)
-    with open(out / f"results_{args.split}.json", "w", encoding="utf-8") as f:
+    with open(out / f"unknown_objects_{args.split}.json", "w", encoding="utf-8") as f:
         json.dump(rows, f, indent=2)
     cols = list(rows[0])
     lines = ["| " + " | ".join(cols) + " |", "|---" * len(cols) + "|"]
     for r in rows:
         lines.append("| " + " | ".join(f"{r[c]:.3f}" if isinstance(r[c], float) else str(r[c])
                                        for c in cols) + " |")
-    (out / f"results_{args.split}.md").write_text("\n".join(lines), encoding="utf-8")
+    (out / f"unknown_objects_{args.split}.md").write_text("\n".join(lines), encoding="utf-8")
     print("\n".join(lines))
 
 

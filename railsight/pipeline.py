@@ -56,7 +56,14 @@ class RailSightPipeline:
         from ultralytics import RTDETR, YOLO
 
         det_path = _resolve(m["det_weights"])
+        if not det_path.exists():
+            raise FileNotFoundError(
+                f"detector weights not found at {det_path}. Download the RailSight weights package and "
+                "unzip it in the repository root (see README, 'Quick start'), or train your own "
+                "(scripts/train/train_det.py).")
         self.det = (RTDETR if "rtdetr" in det_path.as_posix() else YOLO)(str(det_path))
+        self.seg_name = seg_dir.parent.name if self.seg is not None else "none"  # e.g. segformer-b2
+        self.det_name = det_path.parent.parent.name  # e.g. yolo11m_rail_v2_960
         self.speed_kmh = cfg["train"]["speed_kmh"]
         self.reset()
 

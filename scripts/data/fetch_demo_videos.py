@@ -3,7 +3,7 @@
 Portrait clips are cropped to the band containing the track and horizon, and high frame rates
 are reduced to ~30 fps, since the pipeline does not benefit from more.
 
-    python scripts/fetch_demo_videos.py
+    python scripts/data/fetch_demo_videos.py
 """
 
 import argparse

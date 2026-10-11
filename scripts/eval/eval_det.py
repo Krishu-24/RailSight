@@ -11,8 +11,8 @@ dataset (v1) can be scored on the 7-class dataset (v2) for the classes they know
 computed by the same evaluator for every model; Ultralytics' own validator is added as a
 cross-check when a model's classes match the dataset exactly.
 
-    python scripts/eval_det.py                                                  # v1 test set
-    python scripts/eval_det.py --data data/processed/det_v2/data_test_rs19.yaml  # RailSem19 frames
+    python scripts/eval/eval_det.py                                                  # v1 test set
+    python scripts/eval/eval_det.py --data data/processed/det_v2/data_test_rs19.yaml  # RailSem19 frames
 """
 
 import argparse
@@ -118,10 +118,9 @@ def main():
 
     yml, names, paths = load_dataset(args.data, args.split)
     paths = paths[: args.limit]
-    tag = args.tag or (args.split if yml.name == "data.yaml" and "det_v2" not in str(yml)
-                       else f"{args.split}_{yml.parent.name}_{yml.stem}")
-    if args.imgsz != 640:
-        tag += f"_{args.imgsz}px"
+    # reports/detection/<roboflow|cabview>_<split>[_<imgsz>px].json
+    source = "cabview" if "rs19" in yml.stem else "roboflow"
+    tag = args.tag or f"{source}_{args.split}" + (f"_{args.imgsz}px" if args.imgsz != 640 else "")
     gts = load_gt(paths)
     print(f"{len(paths)} {args.split} images, classes {names}")
     rows = []
@@ -149,7 +148,7 @@ def main():
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    with open(out / f"results_{tag}.json", "w", encoding="utf-8") as f:
+    with open(out / f"{tag}.json", "w", encoding="utf-8") as f:
         json.dump(rows, f, indent=2, default=float)
 
     cols = ["mAP50_all", "mAP50_known_classes", "mAP50_shared", "mAP50-95",
@@ -158,7 +157,7 @@ def main():
     for r in rows:
         lines.append(f"| {r['model']} | " + " | ".join(f"{r[c]:.3f}" if r.get(c) is not None else "–"
                                                       for c in cols) + " |")
-    (out / f"results_{tag}.md").write_text("\n".join(lines), encoding="utf-8")
+    (out / f"{tag}.md").write_text("\n".join(lines), encoding="utf-8")
     print("\n".join(lines))
 
 

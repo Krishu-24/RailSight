@@ -10,7 +10,7 @@ from .seg import IGNORE_INDEX, normalize
 
 
 class RailSem19(Dataset):
-    """Pre-resized RailSem19 produced by scripts/prepare_railsem19.py."""
+    """Pre-resized RailSem19 produced by scripts/data/prepare_railsem19.py."""
 
     def __init__(self, root: str | Path, split: str, crop: int = 512, train: bool = True):
         self.root = Path(root)

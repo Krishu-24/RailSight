@@ -1,8 +1,8 @@
 """Fine-tune a segmentation model on RailSem19 and evaluate it.
 
-    python scripts/train_seg.py --arch segformer-b2
-    python scripts/train_seg.py --arch deeplab-r50
-    python scripts/train_seg.py --arch segformer-b2 --eval-only --split test
+    python scripts/train/train_seg.py --arch segformer-b2
+    python scripts/train/train_seg.py --arch deeplab-r50
+    python scripts/train/train_seg.py --arch segformer-b2 --eval-only --split test
 """
 
 import argparse

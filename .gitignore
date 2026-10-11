@@ -33,3 +33,6 @@ reports/*_prelim/
 
 # cached model outputs written by evaluation scripts
 reports/*/cache/
+
+# packaged weights (share privately, see scripts/tools/package_weights.py)
+dist/

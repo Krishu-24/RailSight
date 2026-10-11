@@ -10,7 +10,7 @@ so part of the spread comes from people, not from ranging).
 
 Uses RailSem19 ground-truth masks only (no model), so it isolates the geometry.
 
-    python scripts/eval_ranging_consistency.py
+    python scripts/eval/eval_ranging_consistency.py
 """
 
 import argparse

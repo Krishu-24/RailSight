@@ -1,9 +1,9 @@
-"""Build docs/demo.gif from the rendered demo videos (outputs/final, see scripts/run_video.py).
+"""Build docs/assets/demo.gif from the rendered demo videos (outputs/final, see railsight video).
 
 Picks one representative moment per clip from its per-frame log, letterboxes every frame to 16:9
 and encodes with ffmpeg's two-pass palette (bundled with imageio-ffmpeg).
 
-    python scripts/make_demo_gif.py
+    python scripts/tools/make_demo_gif.py
 """
 
 import argparse
@@ -48,7 +48,7 @@ def fit(im):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--src", default="outputs/final")
-    ap.add_argument("--out", default="docs/demo.gif")
+    ap.add_argument("--out", default="docs/assets/demo.gif")
     ap.add_argument("--fps", type=int, default=6)
     args = ap.parse_args()
 
