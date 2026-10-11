@@ -117,3 +117,29 @@ So roughly **70+ cattle strikes per day** on Indian Railways. Each one also dela
 - ⚠ ERA EU-wide Common Safety Indicators (trespasser / level-crossing fatality shares).
 - ⚠ NCRB ADSI table separating "fall from train" and "struck on track".
 - Official RDSO braking distances by train type (if publicly available).
+
+---
+
+## 6. Key results and findings to report (all numbers in README "Results", generated from reports/)
+
+1. **Segmentation:** SegFormer-B2 mIoU 0.696 / track IoU 0.912 (RailSem19 test). DeepLabV3-R50 ties on
+   track IoU (0.914) but its corridor geometry is worse (~20% higher ranging deviation): pixel
+   overlap is not the metric that matters for ranging.
+2. **Corridor:** found on 99.9% of frames with a real track; segmentation adds 3.8 / 7.3 / 13.5%
+   ranging deviation at 25 / 50 / 100 m.
+3. **Ranging without calibration:** gauge vs human-height distance ratio 0.995 for 708 people at track
+   level (no scale bias; spread ±31%, mostly the reference). People on platforms: 0.77, as the
+   flat-ground geometry predicts.
+4. **Detection domain gap (important):** detectors fine-tuned on Roboflow images score 0.67–0.71 mAP50
+   on the Roboflow test but only 0.06–0.08 on real cab-view frames (worse than un-tuned COCO, 0.19).
+   Adding ~11k boxes derived from RailSem19 masks (v2) gives 0.43 on cab-view frames (person AP 0.52)
+   without losing Roboflow accuracy (0.716). Lesson: test on the deployment viewpoint.
+5. **Unknown objects:** class-only rule precision 0.58 / recall 0.48 / 4.9% false alarms; adding
+   low-confidence pixels quadruples false alarms. Temporal persistence and a low-visibility guard
+   further cut false alarms on real video.
+6. **Speed:** full pipeline 17.7 FPS on an RTX 5060 Laptop (from 15.0 after profiling-driven
+   optimisation, predictions unchanged).
+7. **Negative results worth stating:** rail-pair gauge measurement (helps at merged switches, hurts
+   elsewhere); motion-based vehicle mask (rails ahead are as static as the dashboard); Ultralytics
+   `time=` budget silently stretches the LR schedule; YOLO11m vs YOLO11s differences are within the
+   noise of a 270-image test set.
